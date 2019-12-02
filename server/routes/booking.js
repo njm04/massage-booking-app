@@ -10,7 +10,7 @@ const secret_key = process.env.SECRET_KEY;
 router.post('/', verifyToken, async (req, res) => {
     jwt.verify(req.token, secret_key, async (err, auth) => {
         if(err) {
-            return res.sendStatus(403);
+            return res.json({status: 403, message: 'Unauthorized'});
         } else {
             const massageType = req.body.massageType;
             const duration = req.body.duration;
@@ -24,13 +24,15 @@ router.post('/', verifyToken, async (req, res) => {
             });
 
             await booking.save();
-            return res.sendStatus(200);
+            return res.json({status: 200, message: 'booking created.'});
         }
     });
 });
 
 router.get('/', async (req, res) => {
-    await Booking.find()
+    await Booking
+            .where({isDeleted: 0})
+            .find()
             .populate('bookedBy', '-_id firstName lastName')
             .exec((err, user) => {
                 if(err) return res.status(500); 
@@ -41,26 +43,44 @@ router.get('/', async (req, res) => {
 router.put('/:id', verifyToken, async (req, res) => {
     jwt.verify(req.token, secret_key, async (err) => {
         if(err) {
-            return res.sendStatus(403);
+            return res.json({status: 403, message: 'Unauthorized'});
         } else {
             const massageType = req.body.massageType;
             const duration = req.body.duration;
             const date = req.body.date;
-
-            await Booking.updateOne(
-                {_id : req.params.id},
-                {
-                    massageType: massageType,
-                    duration: duration,
-                    date: date
-                }
-            );
-
-            return res.sendStatus(200);
+            const booking = await Booking.findById(req.params.id);
+            if(booking !== null) {
+                await Booking.updateOne(
+                    {
+                        massageType: massageType,
+                        duration: duration,
+                        date: date
+                    }
+                );
+    
+                return res.json({status: 200, message: "Successfully updated."});
+            } else {
+                return res.json({status: 500, message: 'Booking not found.'});
+            }
+            
         }
     });
-    // console.log(req.body)
-    // console.log(bookings)
-})
+});
+
+router.put('/delete/:id', verifyToken, async (req, res) => {
+    jwt.verify(req.token, secret_key, async (err) => {
+        if(err) {
+            return res.json({status: 403, message: 'Unauthorized'});
+        } else {
+            const booking = await Booking.where({isDeleted: 0}).findOne({_id: req.params.id});
+            if(booking !== null) {
+                await Booking.updateOne({isDeleted: 1});
+                return res.json({status: 200, message: 'Successfully deleted'});
+            };
+            return res.json({status: 500, message: 'Booking not found.'});
+        }
+    });
+});
+
 
 module.exports = router;

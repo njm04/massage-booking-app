@@ -14,17 +14,17 @@ router.post('/', async (req, res) => {
 
         if(await bcrypt.compare(password, user.password)) {
             jwt.sign({user}, secret_key, (err, token) => {
-                if(err) return res.status(400);
+                if(err) return res.json({status: 500, err});
                 return res.json({
                     token,
                     message: 'Authenticated'
                 });
             });
         } else {
-            return res.status(401).json('Unauthorized');
+            return res.json({status: 401, message: 'Unauthorized'});
         }
     } catch(err) {
-        return res.status(400).json('Login Error.'); 
+        return res.json({status: 500, message: 'Login Error.'});
     }
 });
 

@@ -20,9 +20,9 @@ router.post('/register', async (req, res) => {
         });
 
         await newUser.save();
-        return res.sendStatus(200);
+        return res.json({status: 200, message: 'Registered successfully'});
     } catch (err) {
-        return res.status(400).json('Username / Email already exists.');
+        return res.json({status: 400, message: 'Username / Email already exists.'});
     }
 });
 
