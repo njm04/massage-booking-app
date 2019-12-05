@@ -40,6 +40,24 @@ router.get('/', async (req, res) => {
             });
 });
 
+router.get('/:id', verifyToken, async (req, res) => {
+    const userId = req.params.id;
+    jwt.verify(req.token, secret_key, async (err) => {
+        if(err) {
+            return res.json({status: 403, message: 'Unauthorized'});
+        } else {
+            await Booking
+                .where({bookedBy: userId})
+                .find()
+                .populate('bookedBy', '_id firstName lastName')
+                .exec((err, user) => {
+                    if(err) return res.status(500); 
+                    return res.json(user);
+                });
+        }
+    });
+});
+
 router.put('/:id', verifyToken, async (req, res) => {
     jwt.verify(req.token, secret_key, async (err) => {
         if(err) {
