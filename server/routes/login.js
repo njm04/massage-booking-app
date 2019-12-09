@@ -14,9 +14,16 @@ router.post('/', async (req, res) => {
             return res.json({status: 401, message: 'Email / password did not match'});
         } else {
             const user = await User.findOne({'email': email});
+            const payload = {
+                _id: user._id,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName
+            }
+            console.log(payload)
 
             if(await bcrypt.compare(password, user.password)) {
-                jwt.sign({user}, secret_key, (err, token) => {
+                jwt.sign(payload, secret_key, (err, token) => {
                     if(err) return res.json({status: 500, err});
                     return res.json({
                         status: 200,
