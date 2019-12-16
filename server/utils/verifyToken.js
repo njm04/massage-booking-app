@@ -3,7 +3,7 @@ const verifyToken = (req, res, next) => {
     if(typeof bearerHeader !== 'undefined') {
         // const bearerToken = req.get('authorization');
         const bearer = bearerHeader.split(' ');
-        const bearerToken = bearer[0];
+        const bearerToken = bearer[1];
         req.token = bearerToken;
 
         next();

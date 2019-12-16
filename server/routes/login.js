@@ -10,21 +10,33 @@ router.post('/', async (req, res) => {
         const password = req.body.password;
         const secret_key = process.env.SECRET_KEY;
 
-        const user = await User.findOne({'email': email});
-
-        if(await bcrypt.compare(password, user.password)) {
-            jwt.sign({user}, secret_key, (err, token) => {
-                if(err) return res.status(400);
-                return res.json({
-                    token,
-                    message: 'Authenticated'
-                });
-            });
+        if(!email || !password) {
+            return res.json({status: 401, message: 'Email / password did not match'});
         } else {
-            return res.status(401).json('Unauthorized');
+            const user = await User.findOne({'email': email});
+            const payload = {
+                _id: user._id,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName
+            }
+
+            if(await bcrypt.compare(password, user.password)) {
+                jwt.sign(payload, secret_key, (err, token) => {
+                    if(err) return res.json({status: 500, err});
+                    return res.json({
+                        status: 200,
+                        token,
+                        message: 'Authenticated'
+                    });
+                });
+            } else {
+                return res.json({status: 401, message: 'Password did not match'});
+            }
         }
+
     } catch(err) {
-        return res.status(400).json('Login Error.'); 
+        return res.json({status: 500, message: 'Email / password did not match'});
     }
 });
 
