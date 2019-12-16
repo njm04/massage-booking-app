@@ -20,7 +20,6 @@ router.post('/', async (req, res) => {
                 firstName: user.firstName,
                 lastName: user.lastName
             }
-            console.log(payload)
 
             if(await bcrypt.compare(password, user.password)) {
                 jwt.sign(payload, secret_key, (err, token) => {

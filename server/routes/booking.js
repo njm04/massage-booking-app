@@ -35,7 +35,6 @@ router.post('/', verifyToken, async (req, res) => {
                 await booking.save();
                 return res.json({ status: 200, message: 'booking created.' });
             } catch (e) {
-                console.log(e)
                 return res.json({status: 500, message: 'Some fields are empty.'});
             }
         }
@@ -60,6 +59,7 @@ router.get('/:id', verifyToken, async (req, res) => {
             return res.json({ status: 403, message: 'Unauthorized' });
         } else {
             await Booking
+                .where({ isDeleted: 0 })
                 .where({ bookedBy: userId })
                 .find()
                 .populate('bookedBy', '_id firstName lastName')
@@ -79,17 +79,26 @@ router.put('/:id', verifyToken, async (req, res) => {
             const massageType = req.body.massageType;
             const duration = req.body.duration;
             const date = req.body.date;
+            const contactNumber = req.body.contactNumber;
+            const address = req.body.address;
+            const city = req.body.city;
+            const zip = req.body.zipCode;
             const booking = await Booking.findById(req.params.id);
             if (booking !== null) {
-                await Booking.updateOne(
+                const updatedBooking = await Booking.updateOne(
+                    { _id: req.params.id },
                     {
                         massageType: massageType,
                         duration: duration,
-                        date: date
+                        date: date,
+                        contactNumber: contactNumber,
+                        address: address,
+                        city: city,
+                        zip: zip
                     }
                 );
 
-                return res.json({ status: 200, message: "Successfully updated." });
+                return res.json({ status: 200, data: updatedBooking, message: "Successfully updated." });
             } else {
                 return res.json({ status: 500, message: 'Booking not found.' });
             }
@@ -105,8 +114,22 @@ router.put('/delete/:id', verifyToken, async (req, res) => {
         } else {
             const booking = await Booking.where({ isDeleted: 0 }).findOne({ _id: req.params.id });
             if (booking !== null) {
-                await Booking.updateOne({ isDeleted: 1 });
+                await booking.updateOne({ isDeleted: 1 });
                 return res.json({ status: 200, message: 'Successfully deleted' });
+            };
+            return res.json({ status: 500, message: 'Booking not found.' });
+        }
+    });
+});
+
+router.get('/update/view/:id', verifyToken, async (req, res) => {
+    jwt.verify(req.token, secret_key, async (err) => {
+        if (err) {
+            return res.json({ status: 403, message: 'Unauthorized' });
+        } else {
+            const booking = await Booking.where({ isDeleted: 0 }).findOne({ _id: req.params.id });
+            if (booking !== null) {
+                return res.json({ status: 200, data: booking, message: 'Retrieved' });
             };
             return res.json({ status: 500, message: 'Booking not found.' });
         }
