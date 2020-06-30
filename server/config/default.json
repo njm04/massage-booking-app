@@ -1,0 +1,4 @@
+{
+  "jwtPrivateKey": "mysecretkey",
+  "ATLAS_DB": "mongodb+srv://admin:admin123@cluster0-d6fao.mongodb.net/massage-booking?retryWrites=true&w=majority"
+}
