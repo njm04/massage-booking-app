@@ -5,6 +5,11 @@ const { User, validate } = require("../models/user.model");
 const auth = require("../middleware/auth");
 const router = express.Router();
 
+router.get("/", async (req, res) => {
+  const users = await User.find().populate("userType", "_id name");
+  res.send(users);
+});
+
 router.get("/me", auth, async (req, res) => {
   const user = await User.findById(req.user._id).select("-password");
   res.send(user);
@@ -19,7 +24,14 @@ router.post("/", async (req, res) => {
 
   try {
     user = new User(
-      _.pick(req.body, ["firstName", "lastName", "email", "age", "password"])
+      _.pick(req.body, [
+        "firstName",
+        "lastName",
+        "email",
+        "age",
+        "password",
+        "userType",
+      ])
     );
     user.password = await bcrypt.hash(user.password, 10);
 
@@ -28,7 +40,16 @@ router.post("/", async (req, res) => {
 
     res
       .header("x-auth-token", token)
-      .send(_.pick(user, ["_id", "firstName", "lastName", "email", "age"]));
+      .send(
+        _.pick(user, [
+          "_id",
+          "firstName",
+          "lastName",
+          "email",
+          "age",
+          "userType",
+        ])
+      );
   } catch (error) {
     res.status(500).send("Unexpected error occured");
   }
