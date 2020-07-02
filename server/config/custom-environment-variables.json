@@ -1,0 +1,4 @@
+{
+  "jwtPrivateKey": "booking_jwtPrivateKey",
+  "ATLAS_DB": "booking_ATLAS_DB"
+}
