@@ -82,21 +82,11 @@ router.put("/delete/:id", [auth, validateObjectId], async (req, res) => {
   res.send(booking);
 });
 
-//TODO: figure out where and how this endpoint was used then refactor
-router.get("/update/view/:id", verifyToken, async (req, res) => {
-  jwt.verify(req.token, secret_key, async (err) => {
-    if (err) {
-      return res.json({ status: 403, message: "Unauthorized" });
-    } else {
-      const booking = await Booking.where({ isDeleted: 0 }).findOne({
-        _id: req.params.id,
-      });
-      if (booking !== null) {
-        return res.json({ status: 200, data: booking, message: "Retrieved" });
-      }
-      return res.json({ status: 500, message: "Booking not found." });
-    }
-  });
+router.get("/update-view/:id", [auth, validateObjectId], async (req, res) => {
+  const booking = await Booking.findOne({ _id: req.params.id, isDeleted: 0 });
+  if (!booking) return res.status(404).send("Booking not found");
+
+  res.send(booking);
 });
 
 module.exports = router;
