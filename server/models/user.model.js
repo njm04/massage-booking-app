@@ -14,6 +14,7 @@ const userSchema = new Schema(
     age: { type: Number, require: true },
     password: { type: String, require: true },
     userType: { type: Schema.Types.ObjectId, ref: "UserType" },
+    isDeleted: { type: Boolean, require: true, default: false },
   },
   {
     timestamps: true,
@@ -26,6 +27,7 @@ userSchema.methods.generateAuthToken = function () {
     email: this.email,
     firstName: this.firstName,
     lastName: this.lastName,
+    userType: this.userType,
   };
 
   return jwt.sign(payload, config.get("jwtPrivateKey"));
@@ -41,6 +43,7 @@ const validateUsers = (user) => {
     age: Joi.number().min(0).required(),
     password: Joi.string().min(5).max(1000).required(),
     userType: Joi.objectId().required(),
+    isDeleted: Joi.boolean(),
   };
 
   return Joi.validate(user, schema);

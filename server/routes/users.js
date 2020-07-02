@@ -1,8 +1,11 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
+const Joi = require("joi");
 const _ = require("lodash");
 const { User, validate } = require("../models/user.model");
 const auth = require("../middleware/auth");
+const admin = require("../middleware/admin");
+const validateObjectId = require("../middleware/validateObjectId");
 const router = express.Router();
 
 router.get("/", async (req, res) => {
@@ -54,5 +57,61 @@ router.post("/", async (req, res) => {
     res.status(500).send("Unexpected error occured");
   }
 });
+
+router.put("/:id", [auth, admin, validateObjectId], async (req, res) => {
+  const { error } = validateStatus(req.body);
+  if (error) return res.status(400).send(error.details[0].message);
+
+  const options = { new: true, select: "_id email isDeleted" };
+  const user = await User.findByIdAndUpdate(
+    req.params.id,
+    {
+      isDeleted: req.body.isDeleted,
+    },
+    options
+  );
+
+  if (!user) return res.status(404).send("User not found");
+  res.send(user);
+});
+
+router.put(
+  "/change-password/:id",
+  [auth, validateObjectId],
+  async (req, res) => {
+    const { error } = validatePassword(req.body);
+    if (error) return res.status(400).send(error.details[0].message);
+
+    const password = await bcrypt.hash(req.body.password, 10);
+    const options = { new: true, select: "_id email updatedAt" };
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      {
+        password,
+      },
+      options
+    );
+
+    if (!user) return res.status(404).send("User not found");
+
+    res.send(user);
+  }
+);
+
+const validateStatus = (req) => {
+  const schema = {
+    isDeleted: Joi.boolean().required(),
+  };
+
+  return Joi.validate(req, schema);
+};
+
+const validatePassword = (req) => {
+  const schema = {
+    password: Joi.string().min(5).max(1000).required(),
+  };
+
+  return Joi.validate(req, schema);
+};
 
 module.exports = router;
