@@ -1,7 +1,7 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const { Booking, validate } = require("../models/booking.model");
-const verifyToken = require("../utils/verifyToken");
+// const verifyToken = require("../utils/verifyToken");
 const auth = require("../middleware/auth");
 const validateObjectId = require("../middleware/validateObjectId");
 
