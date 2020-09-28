@@ -3,7 +3,7 @@ const winston = require("winston");
 const { Booking } = require("../models/booking.model");
 
 module.exports = () => {
-  const job = new CronJob("00 00 * * * *", async () => {
+  const job = new CronJob("0 0 * * *", async () => {
     winston.info("You will see this message everyday at midnight");
     const result = await Booking.updateMany(
       {

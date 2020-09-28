@@ -1,4 +1,4 @@
-require("./startup/cronJob")();
+// require("./startup/cronJob")();
 const express = require("express");
 const winston = require("winston");
 // loads environment variables from a .env file into process.env
