@@ -27,12 +27,26 @@ router.post("/", auth, async (req, res) => {
   res.send(booking);
 });
 
-router.get("/", async (req, res) => {
-  const booking = await Booking.find({ isDeleted: 0 }).populate(
+router.get("/", auth, async (req, res) => {
+  const { userType } = req.user;
+  let bookings = await Booking.find({ isDeleted: 0, userType }).populate(
     "bookedBy",
     "-_id firstName lastName"
   );
-  return res.send(booking);
+
+  bookings = bookings.map((booking) => {
+    return {
+      id: booking._id,
+      name: booking.bookedBy.firstName + " " + booking.bookedBy.lastName,
+      massageType: booking.massageType,
+      duration: booking.duration,
+      contactNumber: booking.contactNumber,
+      address: booking.address + ", " + booking.city + ", " + booking.zip,
+      date: new Date(booking.date).toLocaleString(),
+    };
+  });
+
+  return res.send(bookings);
 });
 
 router.get("/:id", [auth, validateObjectId], async (req, res) => {
