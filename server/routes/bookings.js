@@ -4,20 +4,42 @@ const { Booking, validate } = require("../models/booking.model");
 // const verifyToken = require("../utils/verifyToken");
 const auth = require("../middleware/auth");
 const validateObjectId = require("../middleware/validateObjectId");
+const { User } = require("../models/user.model");
+const { UserType } = require("../models/userType.model");
 
 const router = express.Router();
 const secret_key = process.env.SECRET_KEY;
 
+const UserTypesEnum = Object.freeze({
+  ADMIN: "admin",
+  THERAPIST: "therapist",
+  CUSTOMER: "customer",
+});
+
 router.post("/", auth, async (req, res) => {
+  const { userType: userTypeId, _id: userId } = req.user;
   const { error } = validate(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
+  const user = await User.findById(userId);
+  if (!user) return res.status(400).send("Invalid user.");
+
+  const userType = await UserType.findById(userTypeId);
+  if (!userType) return res.status(400).send("Invalid user type.");
+
   const booking = new Booking({
-    bookedBy: req.user._id,
+    user: {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      userType: { _id: userType._id, name: userType.name },
+    },
     massageType: req.body.massageType,
     duration: req.body.duration,
     contactNumber: req.body.contactNumber,
     address: req.body.address,
+    addressTwo: req.body.addressTwo,
     city: req.body.city,
     zip: req.body.zip,
     date: req.body.date,
@@ -27,17 +49,29 @@ router.post("/", auth, async (req, res) => {
   res.send(booking);
 });
 
-router.get("/", auth, async (req, res) => {
-  const { userType } = req.user;
-  let bookings = await Booking.find({ isDeleted: 0, userType }).populate(
-    "bookedBy",
-    "-_id firstName lastName"
-  );
+router.get("/", [auth], async (req, res) => {
+  let bookings = [];
+
+  const { userType: userTypeId, _id: userId } = req.user;
+
+  const userType = await UserType.findById(userTypeId);
+  if (!userType) return res.status(400).send("Invalid user type.");
+
+  if (userType.name === UserTypesEnum.ADMIN) {
+    bookings = await Booking.find({
+      isDeleted: 0,
+    });
+  } else if (userType.name === UserTypesEnum.CUSTOMER) {
+    bookings = await Booking.find({
+      isDeleted: 0,
+      "user._id": userId,
+    });
+  }
 
   bookings = bookings.map((booking) => {
     return {
       id: booking._id,
-      name: booking.bookedBy.firstName + " " + booking.bookedBy.lastName,
+      name: booking.user.firstName + " " + booking.user.lastName,
       massageType: booking.massageType,
       duration: booking.duration,
       contactNumber: booking.contactNumber,
