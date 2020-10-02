@@ -1,10 +1,13 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
+const Fawn = require("fawn");
+const mongoose = require("mongoose");
 const { Booking, validate } = require("../models/booking.model");
 // const verifyToken = require("../utils/verifyToken");
 const auth = require("../middleware/auth");
 const validateObjectId = require("../middleware/validateObjectId");
 const { User } = require("../models/user.model");
+const { Therapist } = require("../models/therapist.model");
 const { UserType } = require("../models/userType.model");
 
 const router = express.Router();
@@ -16,13 +19,20 @@ const UserTypesEnum = Object.freeze({
   CUSTOMER: "customer",
 });
 
+Fawn.init(mongoose);
+
 router.post("/", auth, async (req, res) => {
   const { userType: userTypeId, _id: userId } = req.user;
+
   const { error } = validate(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
   const user = await User.findById(userId);
   if (!user) return res.status(400).send("Invalid user.");
+
+  const { therapist: therapistId } = req.body;
+  const therapist = await User.findById(therapistId);
+  if (!therapist) return res.status(400).send("Therapist not found.");
 
   const userType = await UserType.findById(userTypeId);
   if (!userType) return res.status(400).send("Invalid user type.");
@@ -35,18 +45,39 @@ router.post("/", auth, async (req, res) => {
       email: user.email,
       userType: { _id: userType._id, name: userType.name },
     },
+    therapist: {
+      _id: therapist._id,
+      firstName: therapist.firstName,
+      lastName: therapist.lastName,
+    },
     massageType: req.body.massageType,
     duration: req.body.duration,
     contactNumber: req.body.contactNumber,
     address: req.body.address,
+    state: req.body.state,
     addressTwo: req.body.addressTwo,
     city: req.body.city,
     zip: req.body.zip,
     date: req.body.date,
   });
 
-  await booking.save();
-  res.send(booking);
+  try {
+    new Fawn.Task()
+      .save("bookings", booking)
+      .update(
+        "users",
+        { _id: therapist._id },
+        {
+          isAvailable: false,
+        }
+      )
+      .run();
+
+    // await booking.save();
+    res.send(booking);
+  } catch (error) {
+    res.status(500).send("Unexpected error occured");
+  }
 });
 
 router.get("/", [auth], async (req, res) => {
@@ -75,13 +106,18 @@ router.get("/", [auth], async (req, res) => {
       massageType: booking.massageType,
       duration: booking.duration,
       contactNumber: booking.contactNumber,
-      address: booking.address + ", " + booking.city + ", " + booking.zip,
+      address: concatAddress(booking),
       date: new Date(booking.date).toLocaleString(),
     };
   });
 
   return res.send(bookings);
 });
+
+const concatAddress = (obj) => {
+  const addressTwo = obj.addressTwo ? obj.addressTwo + " " : "";
+  return `${addressTwo}${obj.address}, ${obj.city}, ${obj.state}, ${obj.zip}`;
+};
 
 router.get("/:id", [auth, validateObjectId], async (req, res) => {
   const booking = await Booking.findOne({
