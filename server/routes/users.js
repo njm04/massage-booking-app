@@ -3,13 +3,17 @@ const bcrypt = require("bcryptjs");
 const Joi = require("joi");
 const _ = require("lodash");
 const { User, validate } = require("../models/user.model");
+const { Therapist } = require("../models/therapist.model");
+const { UserType } = require("../models/userType.model");
 const auth = require("../middleware/auth");
 const admin = require("../middleware/admin");
 const validateObjectId = require("../middleware/validateObjectId");
 const router = express.Router();
 
 router.get("/", async (req, res) => {
-  const users = await User.find().populate("userType", "_id name");
+  const users = await User.find()
+    .populate("userType", "_id name")
+    .select("_id firstName lastName email isAvailable");
   res.send(users);
 });
 
@@ -37,7 +41,6 @@ router.post("/", async (req, res) => {
       ])
     );
     user.password = await bcrypt.hash(user.password, 10);
-
     await user.save();
     const token = user.generateAuthToken();
 
@@ -53,6 +56,59 @@ router.post("/", async (req, res) => {
           "userType",
         ])
       );
+  } catch (error) {
+    res.status(500).send("Unexpected error occured");
+  }
+});
+
+router.post("/register-therapist", auth, async (req, res) => {
+  const { userType: userTypeId, _id: userId } = req.user;
+
+  const { error } = validate(req.body);
+  if (error) return res.status(400).send(error.details[0].message);
+
+  const userInfo = await User.findById(userId);
+  if (!userInfo) return res.status(400).send("Invalid user.");
+
+  let user = await User.findOne({ email: req.body.email });
+  if (user) return res.status(400).send("User already exists");
+
+  const userType = await UserType.findById(userTypeId);
+  if (!userType) return res.status(400).send("Invalid user type.");
+  try {
+    const payload = _.pick(req.body, [
+      "firstName",
+      "lastName",
+      "email",
+      "age",
+      "password",
+      "userType",
+    ]);
+    const creatorInfo = _.pick(userInfo, [
+      "firstName",
+      "lastName",
+      "email",
+      "userType",
+    ]);
+
+    payload.createdBy = creatorInfo;
+
+    user = new Therapist(payload);
+    user.password = await bcrypt.hash(user.password, 10);
+    await user.save();
+
+    res.send(
+      _.pick(user, [
+        "_id",
+        "firstName",
+        "lastName",
+        "email",
+        "age",
+        "isAvailable",
+        "userType",
+        "createdBy",
+      ])
+    );
   } catch (error) {
     res.status(500).send("Unexpected error occured");
   }
