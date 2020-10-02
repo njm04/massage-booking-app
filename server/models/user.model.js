@@ -8,14 +8,15 @@ const Schema = mongoose.Schema;
 
 const userSchema = new Schema(
   {
-    email: { type: String, require: true, unique: true },
-    firstName: { type: String, require: true },
-    lastName: { type: String, require: true },
-    age: { type: Number, require: true },
-    password: { type: String, require: true },
+    email: { type: String, required: true, unique: true },
+    firstName: { type: String, required: true },
+    lastName: { type: String, required: true },
+    age: { type: Number, required: true },
+    password: { type: String, required: true },
     userType: { type: Schema.Types.ObjectId, ref: "UserType" },
-    isDeleted: { type: Boolean, require: true, default: false },
+    isDeleted: { type: Boolean, required: true, default: false },
   },
+  { discriminatorKey: "kind", id: false },
   {
     timestamps: true,
   }
