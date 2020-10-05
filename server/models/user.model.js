@@ -16,10 +16,10 @@ const userSchema = new Schema(
     userType: { type: Schema.Types.ObjectId, ref: "UserType" },
     isDeleted: { type: Boolean, required: true, default: false },
   },
-  { discriminatorKey: "kind", id: false },
   {
     timestamps: true,
-  }
+  },
+  { discriminatorKey: "kind", id: false }
 );
 
 userSchema.methods.generateAuthToken = function () {

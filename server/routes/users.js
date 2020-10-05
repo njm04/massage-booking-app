@@ -95,6 +95,7 @@ router.post("/register-therapist", auth, async (req, res) => {
 
     user = new Therapist(payload);
     user.password = await bcrypt.hash(user.password, 10);
+
     await user.save();
 
     res.send(
