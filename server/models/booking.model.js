@@ -51,7 +51,7 @@ const validateBookings = (bookings) => {
     addressTwo: Joi.string().max(10),
     city: Joi.string().min(3).max(255).required(),
     zip: Joi.string().min(6).max(255).required(),
-    date: Joi.date().greater("now").required(),
+    date: Joi.date().required(),
   };
 
   return Joi.validate(bookings, schema);
