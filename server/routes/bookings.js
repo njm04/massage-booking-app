@@ -62,7 +62,13 @@ router.post("/", auth, async (req, res) => {
   });
 
   try {
-    const appointmentId = booking._id;
+    const reservation = {
+      _id: booking._id,
+      massageType: booking.massageType,
+      name: `${booking.user.firstName} ${booking.user.lastName}`,
+      duration: booking.duration,
+      date: booking.date,
+    };
 
     new Fawn.Task()
       .save("bookings", booking)
@@ -71,7 +77,7 @@ router.post("/", auth, async (req, res) => {
         { _id: therapist._id },
         {
           isAvailable: false,
-          $push: { appointments: { _id: appointmentId, date: req.body.date } },
+          $push: { reservations: reservation },
         }
       )
       .run();
