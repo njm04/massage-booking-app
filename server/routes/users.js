@@ -13,7 +13,7 @@ const router = express.Router();
 router.get("/", async (req, res) => {
   const users = await User.find()
     .populate("userType", "_id name")
-    .select("_id firstName lastName email isAvailable");
+    .select("_id firstName lastName email isAvailable reservations");
   res.send(users);
 });
 
