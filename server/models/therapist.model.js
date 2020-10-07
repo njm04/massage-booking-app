@@ -6,12 +6,7 @@ const Schema = mongoose.Schema;
 const therapistSchema = new Schema(
   {
     isAvailable: { type: Boolean, required: true, default: true },
-    appointments: [
-      {
-        // _id: { type: mongoose.ObjectId, required: true },
-        date: { type: Date, required: true },
-      },
-    ],
+    reservations: { type: Array, required: true, default: [] },
     createdBy: {
       type: new Schema({
         firstName: { type: String, required: true },
