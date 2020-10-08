@@ -82,7 +82,6 @@ router.post("/", auth, async (req, res) => {
       )
       .run();
 
-    // await booking.save();
     res.send(booking);
   } catch (error) {
     res.status(500).send("Unexpected error occured");
@@ -108,25 +107,8 @@ router.get("/", [auth], async (req, res) => {
     });
   }
 
-  bookings = bookings.map((booking) => {
-    return {
-      id: booking._id,
-      name: booking.user.firstName + " " + booking.user.lastName,
-      massageType: booking.massageType,
-      duration: booking.duration,
-      contactNumber: booking.contactNumber,
-      address: concatAddress(booking),
-      date: new Date(booking.date).toLocaleString(),
-    };
-  });
-
   return res.send(bookings);
 });
-
-const concatAddress = (obj) => {
-  const addressTwo = obj.addressTwo ? obj.addressTwo + " " : "";
-  return `${addressTwo}${obj.address}, ${obj.city}, ${obj.state}, ${obj.zip}`;
-};
 
 router.get("/:id", [auth, validateObjectId], async (req, res) => {
   const booking = await Booking.findOne({
