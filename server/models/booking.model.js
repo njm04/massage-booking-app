@@ -33,7 +33,7 @@ const bookingSchema = new Schema(
     city: { type: String, required: true },
     zip: { type: String, required: true },
     date: { type: Date, required: true, default: Date.now },
-    isDeleted: { type: Number, default: 0 },
+    isDeleted: { type: Boolean, required: true, default: false },
   },
   {
     timestamps: true,
@@ -43,6 +43,7 @@ const bookingSchema = new Schema(
 const validateBookings = (bookings) => {
   const schema = {
     therapist: Joi.objectId().required(),
+    prevTherapist: Joi.objectId(),
     massageType: Joi.string().required(),
     duration: Joi.number().min(60).max(120).required(),
     contactNumber: Joi.string().min(10).max(20).required(),
