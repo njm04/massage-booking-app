@@ -6,7 +6,15 @@ const Schema = mongoose.Schema;
 const therapistSchema = new Schema(
   {
     isAvailable: { type: Boolean, required: true, default: true },
-    reservations: { type: Array, required: true, default: [] },
+    reservations: [
+      {
+        _id: { type: Schema.Types.ObjectId },
+        massageType: String,
+        name: String,
+        duration: Number,
+        date: Date,
+      },
+    ],
     createdBy: {
       type: new Schema({
         firstName: { type: String, required: true },
