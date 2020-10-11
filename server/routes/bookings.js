@@ -98,11 +98,11 @@ router.get("/", [auth], async (req, res) => {
 
   if (userType.name === UserTypesEnum.ADMIN) {
     bookings = await Booking.find({
-      isDeleted: 0,
+      isDeleted: false,
     });
   } else if (userType.name === UserTypesEnum.CUSTOMER) {
     bookings = await Booking.find({
-      isDeleted: 0,
+      isDeleted: false,
       "user._id": userId,
     });
   }
@@ -121,21 +121,66 @@ router.get("/:id", [auth, validateObjectId], async (req, res) => {
 });
 
 router.put("/:id", [auth, validateObjectId], async (req, res) => {
+  let payload = {};
+  let reservation = {};
   const { error } = validate(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
-  const options = { new: true };
-  const booking = await Booking.findByIdAndUpdate(
-    req.params.id,
-    {
+  if (req.body.prevTherapist) {
+    const prevTherapist = await User.findById(req.body.prevTherapist);
+    if (!prevTherapist) return res.status(400).send("Therapist not found.");
+    prevTherapist.reservations.pull(req.params.id);
+    await prevTherapist.save();
+
+    const newTherapist = await User.findById(req.body.therapist);
+    if (!newTherapist) return res.status(400).send("Therapist not found.");
+    payload = {
+      therapist: {
+        _id: newTherapist._id,
+        firstName: newTherapist.firstName,
+        lastName: newTherapist.lastName,
+      },
       massageType: req.body.massageType,
       duration: req.body.duration,
       date: req.body.date,
       contactNumber: req.body.contactNumber,
       address: req.body.address,
+      addressTwo: req.body.addressTwo,
+      state: req.body.state,
       city: req.body.city,
       zip: req.body.zip,
-    },
+    };
+
+    const appointment = await Booking.findById(req.params.id);
+    if (!appointment) return res.status(404).send("Appointment not found");
+    reservation = {
+      _id: appointment._id,
+      massageType: appointment.massageType,
+      name: `${appointment.user.firstName} ${appointment.user.lastName}`,
+      duration: appointment.duration,
+      date: appointment.date,
+    };
+
+    newTherapist.reservations.push(reservation);
+    await newTherapist.save();
+  } else {
+    payload = {
+      massageType: req.body.massageType,
+      duration: req.body.duration,
+      date: req.body.date,
+      contactNumber: req.body.contactNumber,
+      address: req.body.address,
+      addressTwo: req.body.addressTwo,
+      state: req.body.state,
+      city: req.body.city,
+      zip: req.body.zip,
+    };
+  }
+
+  const options = { new: true };
+  const booking = await Booking.findByIdAndUpdate(
+    req.params.id,
+    payload,
     options
   );
 
@@ -149,9 +194,15 @@ router.put("/delete/:id", [auth, validateObjectId], async (req, res) => {
 
   const booking = await Booking.findByIdAndUpdate(
     req.params.id,
-    { isDeleted: 1 },
+    { isDeleted: true },
     options
   );
+
+  const therapist = await User.findById(booking.therapist._id);
+  if (!therapist) return res.status(400).send("Therapist not found.");
+  therapist.reservations.pull(req.params.id);
+  await therapist.save();
+
   if (!booking) return res.status(404).send("Booking not found");
 
   res.send(booking);
