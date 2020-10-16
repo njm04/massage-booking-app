@@ -123,8 +123,12 @@ router.get("/:id", [auth, validateObjectId], async (req, res) => {
 router.put("/:id", [auth, validateObjectId], async (req, res) => {
   let payload = {};
   let reservation = {};
+
   const { error } = validate(req.body);
   if (error) return res.status(400).send(error.details[0].message);
+
+  const appointment = await Booking.findById(req.params.id);
+  if (!appointment) return res.status(404).send("Appointment not found");
 
   if (req.body.prevTherapist) {
     const prevTherapist = await User.findById(req.body.prevTherapist);
@@ -151,8 +155,6 @@ router.put("/:id", [auth, validateObjectId], async (req, res) => {
       zip: req.body.zip,
     };
 
-    const appointment = await Booking.findById(req.params.id);
-    if (!appointment) return res.status(404).send("Appointment not found");
     reservation = {
       _id: appointment._id,
       massageType: appointment.massageType,
@@ -175,6 +177,16 @@ router.put("/:id", [auth, validateObjectId], async (req, res) => {
       city: req.body.city,
       zip: req.body.zip,
     };
+
+    // why does model.update queries doesnt work????
+    let therapist = await User.findById(req.body.therapist);
+    if (!therapist) return res.status(400).send("Therapist not found.");
+
+    const reservation = therapist.reservations.id(req.params.id);
+    reservation.duration = req.body.duration;
+    reservation.date = req.body.date;
+
+    await therapist.save();
   }
 
   const options = { new: true };
