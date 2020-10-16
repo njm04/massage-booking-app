@@ -49,7 +49,7 @@ const validateBookings = (bookings) => {
     contactNumber: Joi.string().min(10).max(20).required(),
     address: Joi.string().min(3).max(255).required(),
     state: Joi.string().max(255).required(),
-    addressTwo: Joi.string().max(10),
+    addressTwo: Joi.string().max(10).optional().allow(""),
     city: Joi.string().min(3).max(255).required(),
     zip: Joi.string().min(6).max(255).required(),
     date: Joi.date().required(),
