@@ -9,10 +9,10 @@ const therapistSchema = new Schema(
     reservations: [
       {
         _id: { type: Schema.Types.ObjectId },
-        massageType: String,
-        name: String,
-        duration: Number,
-        date: Date,
+        massageType: { type: String },
+        name: { type: String },
+        duration: { type: Number },
+        date: { type: Date },
       },
     ],
     createdBy: {
