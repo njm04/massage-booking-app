@@ -23,6 +23,11 @@ router.get("/me", auth, async (req, res) => {
 });
 
 router.post("/", async (req, res) => {
+  if (!req.body.userType) {
+    const userType = await UserType.findOne({ name: "customer" });
+    req.body.userType = userType.id;
+  }
+
   const { error } = validate(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
@@ -35,11 +40,13 @@ router.post("/", async (req, res) => {
         "firstName",
         "lastName",
         "email",
-        "age",
+        "birthDate",
+        "gender",
         "password",
         "userType",
       ])
     );
+
     user.password = await bcrypt.hash(user.password, 10);
     await user.save();
     const token = user.generateAuthToken();
@@ -52,7 +59,8 @@ router.post("/", async (req, res) => {
           "firstName",
           "lastName",
           "email",
-          "age",
+          "birthDate",
+          "gender",
           "userType",
         ])
       );

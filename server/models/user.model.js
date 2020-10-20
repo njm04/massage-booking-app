@@ -3,6 +3,7 @@ const Joi = require("joi");
 const jwt = require("jsonwebtoken");
 const config = require("config");
 Joi.objectId = require("joi-objectid")(Joi);
+const moment = require("moment");
 
 const Schema = mongoose.Schema;
 
@@ -11,7 +12,9 @@ const userSchema = new Schema(
     email: { type: String, required: true, unique: true },
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
-    age: { type: Number, required: true },
+    gender: { type: String, required: true },
+    birthDate: { type: Date, required: true, default: Date.now },
+    age: { type: Number },
     password: { type: String, required: true },
     userType: { type: Schema.Types.ObjectId, ref: "UserType" },
     isDeleted: { type: Boolean, required: true, default: false },
@@ -21,6 +24,11 @@ const userSchema = new Schema(
   },
   { discriminatorKey: "kind", id: false }
 );
+
+userSchema.pre("save", function (next) {
+  this.age = moment().diff(this.birthDate, "years");
+  next();
+});
 
 userSchema.methods.generateAuthToken = function () {
   const payload = {
@@ -41,7 +49,8 @@ const validateUsers = (user) => {
     email: Joi.string().min(5).max(255).email().required(),
     firstName: Joi.string().required(),
     lastName: Joi.string().required(),
-    age: Joi.number().min(0).required(),
+    birthDate: Joi.date().required(),
+    gender: Joi.string().required(),
     password: Joi.string().min(5).max(1000).required(),
     userType: Joi.objectId().required(),
     isDeleted: Joi.boolean(),
