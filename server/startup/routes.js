@@ -6,9 +6,12 @@ const bookings = require("../routes/bookings");
 const userTypes = require("../routes/userTypes");
 const error = require("../middleware/error");
 
+const corsOptions = {
+  exposedHeaders: "x-auth-token",
+};
 module.exports = (app) => {
   app.use(express.json());
-  app.use(cors());
+  app.use(cors(corsOptions));
   app.use("/api/users", users);
   app.use("/api/auth", auth);
   app.use("/api/bookings", bookings);
