@@ -69,7 +69,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-router.post("/register-therapist", auth, async (req, res) => {
+router.post("/create-user", [auth, admin], async (req, res) => {
   const { userType: userTypeId, _id: userId } = req.user;
 
   const { error } = validate(req.body);
@@ -81,17 +81,20 @@ router.post("/register-therapist", auth, async (req, res) => {
   let user = await User.findOne({ email: req.body.email });
   if (user) return res.status(400).send("User already exists");
 
-  const userType = await UserType.findById(userTypeId);
+  const userType = await UserType.findById(req.body.userType);
   if (!userType) return res.status(400).send("Invalid user type.");
+
   try {
     const payload = _.pick(req.body, [
       "firstName",
       "lastName",
       "email",
-      "age",
+      "birthDate",
+      "gender",
       "password",
       "userType",
     ]);
+
     const creatorInfo = _.pick(userInfo, [
       "firstName",
       "lastName",
@@ -101,9 +104,13 @@ router.post("/register-therapist", auth, async (req, res) => {
 
     payload.createdBy = creatorInfo;
 
-    user = new Therapist(payload);
-    user.password = await bcrypt.hash(user.password, 10);
+    if (userType.name === "therapist") {
+      user = new Therapist(payload);
+    } else {
+      user = new User(payload);
+    }
 
+    user.password = await bcrypt.hash(user.password, 10);
     await user.save();
 
     res.send(
@@ -111,9 +118,10 @@ router.post("/register-therapist", auth, async (req, res) => {
         "_id",
         "firstName",
         "lastName",
+        "birthDate",
+        "gender",
         "email",
         "age",
-        "isAvailable",
         "userType",
         "createdBy",
       ])
