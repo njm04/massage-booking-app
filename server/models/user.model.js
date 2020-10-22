@@ -15,6 +15,14 @@ const userSchema = new Schema(
     gender: { type: String, required: true },
     birthDate: { type: Date, required: true, default: Date.now },
     age: { type: Number },
+    createdBy: {
+      type: new Schema({
+        firstName: { type: String, required: true },
+        lastName: { type: String, required: true },
+        userType: { type: String, required: true },
+      }),
+      required: true,
+    },
     password: { type: String, required: true },
     userType: { type: Schema.Types.ObjectId, ref: "UserType" },
     isDeleted: { type: Boolean, required: true, default: false },
