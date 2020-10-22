@@ -3,7 +3,7 @@ const { UserType, validate } = require("../models/userType.model");
 const auth = require("../middleware/auth");
 const router = express.Router();
 
-router.get("/", async (req, res) => {
+router.get("/", auth, async (req, res) => {
   const types = await UserType.find().select("_id name");
   res.send(types);
 });
