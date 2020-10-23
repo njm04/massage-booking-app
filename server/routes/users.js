@@ -13,7 +13,9 @@ const router = express.Router();
 router.get("/", async (req, res) => {
   const users = await User.find()
     .populate("userType", "_id name")
-    .select("_id firstName lastName email isAvailable reservations gender");
+    .select(
+      "_id firstName lastName email isAvailable reservations gender birthDate"
+    );
   res.send(users);
 });
 
@@ -132,21 +134,49 @@ router.post("/create-user", [auth, admin], async (req, res) => {
 });
 
 router.put("/:id", [auth, admin, validateObjectId], async (req, res) => {
-  const { error } = validateStatus(req.body);
+  const options = {
+    new: true,
+    select: "_id email firstName lastName gender birthDate age userType",
+  };
+  const { error } = validateEditUser(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
-  const options = { new: true, select: "_id email isDeleted" };
-  const user = await User.findByIdAndUpdate(
-    req.params.id,
-    {
-      isDeleted: req.body.isDeleted,
-    },
-    options
-  );
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      {
+        email: req.body.email,
+        firstName: req.body.firstName,
+        lastName: req.body.lastName,
+        gender: req.body.gender,
+        birthDate: req.body.birthDate,
+      },
+      options
+    );
 
-  if (!user) return res.status(404).send("User not found");
-  res.send(user);
+    if (!user) return res.status(404).send("User not found");
+    res.send(user);
+  } catch (error) {
+    res.status(500).send("Unexpected error occured");
+  }
 });
+
+// router.put("/:id", [auth, admin, validateObjectId], async (req, res) => {
+//   const { error } = validateStatus(req.body);
+//   if (error) return res.status(400).send(error.details[0].message);
+
+//   const options = { new: true, select: "_id email isDeleted" };
+//   const user = await User.findByIdAndUpdate(
+//     req.params.id,
+//     {
+//       isDeleted: req.body.isDeleted,
+//     },
+//     options
+//   );
+
+//   if (!user) return res.status(404).send("User not found");
+//   res.send(user);
+// });
 
 router.put(
   "/change-password/:id",
@@ -170,6 +200,19 @@ router.put(
     res.send(user);
   }
 );
+
+const validateEditUser = (req) => {
+  const schema = {
+    email: Joi.string().min(5).max(255).email().required(),
+    firstName: Joi.string().required(),
+    lastName: Joi.string().required(),
+    birthDate: Joi.date().required(),
+    gender: Joi.string().required(),
+    userType: Joi.objectId().required(),
+  };
+
+  return Joi.validate(req, schema);
+};
 
 const validateStatus = (req) => {
   const schema = {

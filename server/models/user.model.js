@@ -23,6 +23,12 @@ const userSchema = new Schema(
       }),
       required: true,
     },
+    status: {
+      type: String,
+      required: true,
+      enum: ["active", "suspend"],
+      default: "active",
+    },
     password: { type: String, required: true },
     userType: { type: Schema.Types.ObjectId, ref: "UserType" },
     isDeleted: { type: Boolean, required: true, default: false },
