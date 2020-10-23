@@ -67,6 +67,7 @@ const validateUsers = (user) => {
     gender: Joi.string().required(),
     password: Joi.string().min(5).max(1000).required(),
     userType: Joi.objectId().required(),
+    status: Joi.string().required(),
     isDeleted: Joi.boolean(),
   };
 

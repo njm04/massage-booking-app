@@ -95,6 +95,7 @@ router.post("/create-user", [auth, admin], async (req, res) => {
       "gender",
       "password",
       "userType",
+      "status",
     ]);
 
     const creatorInfo = _.pick(userInfo, [
@@ -124,6 +125,7 @@ router.post("/create-user", [auth, admin], async (req, res) => {
         "gender",
         "email",
         "age",
+        "status",
         "userType",
         "createdBy",
       ])
