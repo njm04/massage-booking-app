@@ -164,22 +164,14 @@ router.put("/:id", [auth, admin, validateObjectId], async (req, res) => {
   }
 });
 
-// router.put("/:id", [auth, admin, validateObjectId], async (req, res) => {
-//   const { error } = validateStatus(req.body);
-//   if (error) return res.status(400).send(error.details[0].message);
+router.delete("/:id", [auth, admin, validateObjectId], async (req, res) => {
+  const user = await User.findById(req.params.id);
+  if (!user) return res.status(404).send("User not found");
 
-//   const options = { new: true, select: "_id email isDeleted" };
-//   const user = await User.findByIdAndUpdate(
-//     req.params.id,
-//     {
-//       isDeleted: req.body.isDeleted,
-//     },
-//     options
-//   );
+  const result = await User.deleteOne({ _id: req.params.id });
 
-//   if (!user) return res.status(404).send("User not found");
-//   res.send(user);
-// });
+  res.send(result);
+});
 
 router.put(
   "/change-password/:id",
