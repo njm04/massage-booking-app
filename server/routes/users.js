@@ -153,6 +153,7 @@ router.put("/:id", [auth, admin, validateObjectId], async (req, res) => {
         gender: req.body.gender,
         birthDate: req.body.birthDate,
         status: req.body.status,
+        userType: req.body.userType,
       },
       options
     ).populate("userType", "_id name");
