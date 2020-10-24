@@ -14,7 +14,7 @@ router.get("/", async (req, res) => {
   const users = await User.find()
     .populate("userType", "_id name")
     .select(
-      "_id firstName lastName email isAvailable reservations gender birthDate"
+      "_id firstName lastName email isAvailable reservations gender birthDate status"
     );
   res.send(users);
 });
@@ -138,7 +138,7 @@ router.post("/create-user", [auth, admin], async (req, res) => {
 router.put("/:id", [auth, admin, validateObjectId], async (req, res) => {
   const options = {
     new: true,
-    select: "_id email firstName lastName gender birthDate age userType",
+    select: "_id firstName lastName email gender birthDate status",
   };
   const { error } = validateEditUser(req.body);
   if (error) return res.status(400).send(error.details[0].message);
@@ -152,9 +152,10 @@ router.put("/:id", [auth, admin, validateObjectId], async (req, res) => {
         lastName: req.body.lastName,
         gender: req.body.gender,
         birthDate: req.body.birthDate,
+        status: req.body.status,
       },
       options
-    );
+    ).populate("userType", "_id name");
 
     if (!user) return res.status(404).send("User not found");
     res.send(user);
@@ -211,6 +212,7 @@ const validateEditUser = (req) => {
     birthDate: Joi.date().required(),
     gender: Joi.string().required(),
     userType: Joi.objectId().required(),
+    status: Joi.string().required(),
   };
 
   return Joi.validate(req, schema);
