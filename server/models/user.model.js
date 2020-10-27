@@ -56,6 +56,14 @@ userSchema.methods.generateAuthToken = function () {
   return jwt.sign(payload, config.get("jwtPrivateKey"));
 };
 
+userSchema.statics.findUserByIdAndPopulate = function (id) {
+  return this.findById(id)
+    .populate("userType", "_id name")
+    .select(
+      "_id firstName lastName email isAvailable reservations gender birthDate status"
+    );
+};
+
 const User = mongoose.model("User", userSchema);
 
 const validateUsers = (user) => {

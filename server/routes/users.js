@@ -116,20 +116,8 @@ router.post("/create-user", [auth, admin], async (req, res) => {
     user.password = await bcrypt.hash(user.password, 10);
     await user.save();
 
-    res.send(
-      _.pick(user, [
-        "_id",
-        "firstName",
-        "lastName",
-        "birthDate",
-        "gender",
-        "email",
-        "age",
-        "status",
-        "userType",
-        "createdBy",
-      ])
-    );
+    user = await User.findUserByIdAndPopulate(user._id);
+    res.send(user);
   } catch (error) {
     res.status(500).send("Unexpected error occured");
   }
@@ -183,7 +171,7 @@ router.delete("/:id", [auth, admin, validateObjectId], async (req, res) => {
   if (!user) return res.status(404).send("User not found");
 
   await User.deleteOne({ _id: req.params.id });
-  res.send(user._id);
+  res.send(user);
 });
 
 router.put(
