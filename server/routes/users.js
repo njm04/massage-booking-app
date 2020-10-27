@@ -28,6 +28,7 @@ router.post("/", async (req, res) => {
   if (!req.body.userType) {
     const userType = await UserType.findOne({ name: "customer" });
     req.body.userType = userType.id;
+    req.body.status = "active";
   }
 
   const { error } = validate(req.body);
@@ -46,33 +47,30 @@ router.post("/", async (req, res) => {
         "gender",
         "password",
         "userType",
+        "status",
       ])
     );
+
+    user.createdBy = _.pick(user, [
+      "_id",
+      "firstName",
+      "lastName",
+      "email",
+      "userType",
+    ]);
 
     user.password = await bcrypt.hash(user.password, 10);
     await user.save();
     const token = user.generateAuthToken();
-
-    res
-      .header("x-auth-token", token)
-      .send(
-        _.pick(user, [
-          "_id",
-          "firstName",
-          "lastName",
-          "email",
-          "birthDate",
-          "gender",
-          "userType",
-        ])
-      );
+    user = await User.findUserByIdAndPopulate(user._id);
+    res.header("x-auth-token", token).send(user);
   } catch (error) {
     res.status(500).send("Unexpected error occured");
   }
 });
 
 router.post("/create-user", [auth, admin], async (req, res) => {
-  const { userType: userTypeId, _id: userId } = req.user;
+  const { _id: userId } = req.user;
 
   const { error } = validate(req.body);
   if (error) return res.status(400).send(error.details[0].message);
@@ -98,21 +96,19 @@ router.post("/create-user", [auth, admin], async (req, res) => {
       "status",
     ]);
 
-    const creatorInfo = _.pick(userInfo, [
-      "firstName",
-      "lastName",
-      "email",
-      "userType",
-    ]);
-
-    payload.createdBy = creatorInfo;
-
     if (userType.name === "therapist") {
       user = new Therapist(payload);
     } else {
       user = new User(payload);
     }
 
+    user.createdBy = _.pick(userInfo, [
+      "_id",
+      "firstName",
+      "lastName",
+      "email",
+      "userType",
+    ]);
     user.password = await bcrypt.hash(user.password, 10);
     await user.save();
 
