@@ -10,8 +10,10 @@ router.post("/", async (req, res) => {
 
   const user = await User.findOne({ email: req.body.email })
     .populate("userType")
-    .select("_id, name password firstName lastName");
+    .select("_id, name password firstName lastName status");
   if (!user) return res.status(400).send("Invalid password or email");
+  if (user.status === "suspend")
+    return res.status(400).send("Account has been suspended");
 
   const validPassword = await bcrypt.compare(req.body.password, user.password);
   if (!validPassword) return res.status(400).send("Invalid password or email");
