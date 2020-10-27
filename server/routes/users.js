@@ -153,7 +153,6 @@ router.put("/:id", [auth, admin, validateObjectId], async (req, res) => {
         gender: req.body.gender,
         birthDate: req.body.birthDate,
         status: req.body.status,
-        userType: req.body.userType,
       },
       options
     ).populate("userType", "_id name");
@@ -203,7 +202,6 @@ const validateEditUser = (req) => {
     lastName: Joi.string().required(),
     birthDate: Joi.date().required(),
     gender: Joi.string().required(),
-    userType: Joi.objectId().required(),
     status: Joi.string().required(),
   };
 
