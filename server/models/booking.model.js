@@ -34,6 +34,12 @@ const bookingSchema = new Schema(
     zip: { type: String, required: true },
     date: { type: Date, required: true, default: Date.now },
     isDeleted: { type: Boolean, required: true, default: false },
+    status: {
+      type: String,
+      required: true,
+      enum: ["pending", "ongoing", "completed"],
+      default: "pending",
+    },
   },
   {
     timestamps: true,
