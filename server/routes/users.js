@@ -143,6 +143,20 @@ router.put("/:id", [auth, admin, validateObjectId], async (req, res) => {
   const { error } = validateEditUser(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
+  const user = await User.findById(req.params.id);
+  if (!user) return res.status(400).send("User not found");
+
+  if (
+    user.__t === "therapist" &&
+    user.reservations.length > 0 &&
+    req.body.status === "suspend"
+  ) {
+    const name = user.firstName + " " + user.lastName;
+    return res
+      .status(400)
+      .send(`Cant suspend ${name}'s account due to existing reservations.`);
+  }
+
   try {
     const user = await User.findByIdAndUpdate(
       req.params.id,
@@ -157,7 +171,7 @@ router.put("/:id", [auth, admin, validateObjectId], async (req, res) => {
       options
     ).populate("userType", "_id name");
 
-    if (!user) return res.status(404).send("User not found");
+    if (!user) return res.status(400).send("User not found");
     res.send(user);
   } catch (error) {
     res.status(500).send("Unexpected error occured");
