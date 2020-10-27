@@ -105,6 +105,11 @@ router.get("/", [auth], async (req, res) => {
       isDeleted: false,
       "user._id": userId,
     });
+  } else {
+    bookings = await Booking.find({
+      isDeleted: false,
+      "therapist._id": userId,
+    });
   }
 
   return res.send(bookings);
