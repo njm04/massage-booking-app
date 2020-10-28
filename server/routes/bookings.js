@@ -1,10 +1,12 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const Fawn = require("fawn");
+const Joi = require("joi");
 const mongoose = require("mongoose");
 const { Booking, validate } = require("../models/booking.model");
 // const verifyToken = require("../utils/verifyToken");
 const auth = require("../middleware/auth");
+const therapist = require("../middleware/therapist");
 const validateObjectId = require("../middleware/validateObjectId");
 const { User } = require("../models/user.model");
 const { Therapist } = require("../models/therapist.model");
@@ -231,5 +233,58 @@ router.get("/update-view/:id", [auth, validateObjectId], async (req, res) => {
 
   res.send(booking);
 });
+
+router.put(
+  "/update-status/:id",
+  [auth, therapist, validateObjectId],
+  async (req, res) => {
+    const { error } = validateStatus(req.body);
+    if (error) return res.status(400).send(error.details[0].message);
+
+    let booking = await Booking.findById(req.params.id);
+    if (!booking) return res.status(400).send("Appointment not found");
+
+    try {
+      if (req.body.status !== "completed") {
+        const options = { new: true };
+        booking = await Booking.findByIdAndUpdate(
+          req.params.id,
+          { status: req.body.status },
+          options
+        );
+        if (!booking) return res.status(400).send("Appointment not found");
+        res.send(booking);
+      } else {
+        await new Fawn.Task()
+          .update(
+            "bookings",
+            { _id: booking._id },
+            { status: req.body.status },
+            { new: true }
+          )
+          .update(
+            "users",
+            { _id: booking.therapist._id },
+            { $pull: { reservations: { _id: booking._id } } }
+          )
+          .run();
+
+        booking = await Booking.findById(req.params.id);
+        res.send(booking);
+      }
+    } catch (error) {
+      console.log(error);
+      res.status(500).send("Unexpected error occured");
+    }
+  }
+);
+
+const validateStatus = (req) => {
+  const schema = {
+    status: Joi.string().required(),
+  };
+
+  return Joi.validate(req, schema);
+};
 
 module.exports = router;
