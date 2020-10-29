@@ -26,7 +26,7 @@ Fawn.init(mongoose);
 router.post("/", auth, async (req, res) => {
   const { userType: userTypeId, _id: userId } = req.user;
 
-  const { error } = validate(req.body);
+  const { error } = validate(req.body, req.user);
   if (error) return res.status(400).send(error.details[0].message);
 
   const user = await User.findById(userId);
@@ -40,7 +40,7 @@ router.post("/", auth, async (req, res) => {
   if (!userType) return res.status(400).send("Invalid user type.");
 
   const booking = new Booking({
-    user: {
+    createdBy: {
       _id: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
@@ -51,6 +51,11 @@ router.post("/", auth, async (req, res) => {
       _id: therapist._id,
       firstName: therapist.firstName,
       lastName: therapist.lastName,
+    },
+    customer: {
+      firstName: req.body.firstName,
+      lastName: req.body.lastName,
+      email: req.user.userType.name === "admin" ? req.body.email : user.email,
     },
     massageType: req.body.massageType,
     duration: req.body.duration,
@@ -67,7 +72,7 @@ router.post("/", auth, async (req, res) => {
     const reservation = {
       _id: booking._id,
       massageType: booking.massageType,
-      name: `${booking.user.firstName} ${booking.user.lastName}`,
+      name: `${booking.customer.firstName} ${booking.customer.lastName}`,
       duration: booking.duration,
       date: booking.date,
     };
@@ -105,7 +110,7 @@ router.get("/", [auth], async (req, res) => {
   } else if (userType.name === UserTypesEnum.CUSTOMER) {
     bookings = await Booking.find({
       isDeleted: false,
-      "user._id": userId,
+      "createdBy._id": userId,
     });
   } else {
     bookings = await Booking.find({
@@ -117,25 +122,15 @@ router.get("/", [auth], async (req, res) => {
   return res.send(bookings);
 });
 
-router.get("/:id", [auth, validateObjectId], async (req, res) => {
-  const booking = await Booking.findOne({
-    _id: req.params.id,
-    isDeleted: 0,
-  }).populate("bookedBy", "-_id firstName lastName");
-  if (!booking) return res.status(404).send("Booking not found");
-
-  res.send(booking);
-});
-
 router.put("/:id", [auth, validateObjectId], async (req, res) => {
   let payload = {};
   let reservation = {};
 
-  const { error } = validate(req.body);
+  const { error } = validate(req.body, req.user);
   if (error) return res.status(400).send(error.details[0].message);
 
   const appointment = await Booking.findById(req.params.id);
-  if (!appointment) return res.status(404).send("Appointment not found");
+  if (!appointment) return res.status(400).send("Appointment not found");
 
   if (req.body.prevTherapist) {
     const prevTherapist = await User.findById(req.body.prevTherapist);
@@ -151,6 +146,11 @@ router.put("/:id", [auth, validateObjectId], async (req, res) => {
         firstName: newTherapist.firstName,
         lastName: newTherapist.lastName,
       },
+      customer: {
+        firstName: req.body.firstName,
+        lastName: req.body.lastName,
+        email: req.body.email,
+      },
       massageType: req.body.massageType,
       duration: req.body.duration,
       date: req.body.date,
@@ -165,7 +165,7 @@ router.put("/:id", [auth, validateObjectId], async (req, res) => {
     reservation = {
       _id: appointment._id,
       massageType: appointment.massageType,
-      name: `${appointment.user.firstName} ${appointment.user.lastName}`,
+      name: `${appointment.createdBy.firstName} ${appointment.createdBy.lastName}`,
       duration: appointment.duration,
       date: appointment.date,
     };
@@ -174,6 +174,11 @@ router.put("/:id", [auth, validateObjectId], async (req, res) => {
     await newTherapist.save();
   } else {
     payload = {
+      customer: {
+        firstName: req.body.firstName,
+        lastName: req.body.lastName,
+        email: req.body.email,
+      },
       massageType: req.body.massageType,
       duration: req.body.duration,
       date: req.body.date,
@@ -203,7 +208,7 @@ router.put("/:id", [auth, validateObjectId], async (req, res) => {
     options
   );
 
-  if (!booking) return res.status(404).send("Booking not found");
+  if (!booking) return res.status(400).send("Booking not found");
 
   res.send(booking);
 });
@@ -232,14 +237,14 @@ router.put("/delete/:id", [auth, validateObjectId], async (req, res) => {
   therapist.reservations.pull(req.params.id);
   await therapist.save();
 
-  if (!booking) return res.status(404).send("Booking not found");
+  if (!booking) return res.status(400).send("Booking not found");
 
   res.send(booking);
 });
 
 router.get("/update-view/:id", [auth, validateObjectId], async (req, res) => {
   const booking = await Booking.findOne({ _id: req.params.id, isDeleted: 0 });
-  if (!booking) return res.status(404).send("Booking not found");
+  if (!booking) return res.status(400).send("Booking not found");
 
   res.send(booking);
 });
@@ -283,7 +288,6 @@ router.put(
         res.send(booking);
       }
     } catch (error) {
-      console.log(error);
       res.status(500).send("Unexpected error occured");
     }
   }
