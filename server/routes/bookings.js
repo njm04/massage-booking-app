@@ -210,12 +210,22 @@ router.put("/:id", [auth, validateObjectId], async (req, res) => {
 
 router.put("/delete/:id", [auth, validateObjectId], async (req, res) => {
   const options = { new: true };
+  const { userType } = req.user;
+  let booking;
 
-  const booking = await Booking.findByIdAndUpdate(
-    req.params.id,
-    { isDeleted: true },
-    options
-  );
+  if (userType.name === "customer") {
+    booking = await Booking.findByIdAndUpdate(
+      req.params.id,
+      { status: "cancelled" },
+      options
+    );
+  } else {
+    booking = await Booking.findByIdAndUpdate(
+      req.params.id,
+      { isDeleted: true },
+      options
+    );
+  }
 
   const therapist = await User.findById(booking.therapist._id);
   if (!therapist) return res.status(400).send("Therapist not found.");
