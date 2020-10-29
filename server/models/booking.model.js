@@ -6,11 +6,22 @@ const Schema = mongoose.Schema;
 
 const bookingSchema = new Schema(
   {
-    user: {
+    // user: {
+    //   type: new Schema({
+    //     firstName: { type: String, required: true },
+    //     lastName: { type: String, required: true },
+    //     email: { type: String, required: true },
+    //     userType: {
+    //       type: new Schema({
+    //         name: { type: String, required: true },
+    //       }),
+    //     },
+    //   }),
+    // },
+    createdBy: {
       type: new Schema({
         firstName: { type: String, required: true },
         lastName: { type: String, required: true },
-        email: { type: String, required: true },
         userType: {
           type: new Schema({
             name: { type: String, required: true },
@@ -22,6 +33,14 @@ const bookingSchema = new Schema(
       type: new Schema({
         firstName: { type: String, required: true },
         lastName: { type: String, required: true },
+      }),
+    },
+    customer: {
+      type: new Schema({
+        _id: false,
+        firstName: { type: String, required: true },
+        lastName: { type: String, required: true },
+        email: { type: String, required: true },
       }),
     },
     massageType: { type: String, required: true },
@@ -46,7 +65,7 @@ const bookingSchema = new Schema(
   }
 );
 
-const validateBookings = (bookings) => {
+const validateBookings = (bookings, user) => {
   const schema = {
     therapist: Joi.objectId().required(),
     prevTherapist: Joi.objectId(),
@@ -55,6 +74,12 @@ const validateBookings = (bookings) => {
     contactNumber: Joi.string().min(10).max(20).required(),
     address: Joi.string().min(3).max(255).required(),
     state: Joi.string().max(255).required(),
+    firstName: Joi.string().max(255).required(),
+    lastName: Joi.string().max(255).required(),
+    email:
+      user.userType.name === "admin"
+        ? Joi.string().min(5).max(255).email().required()
+        : Joi.string().min(5).max(255).email(),
     addressTwo: Joi.string().max(10).optional().allow(""),
     city: Joi.string().min(3).max(255).required(),
     zip: Joi.string().min(6).max(255).required(),
