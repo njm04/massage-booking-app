@@ -177,18 +177,35 @@ router.put(
     const { error } = validatePassword(req.body);
     if (error) return res.status(400).send(error.details[0].message);
 
-    const password = await bcrypt.hash(req.body.password, 10);
-    const options = { new: true, select: "_id email updatedAt" };
-    const user = await User.findByIdAndUpdate(
+    let user = await User.findById(req.params.id);
+    if (!user) return res.status(404).send("User not found");
+
+    const validPassword = await bcrypt.compare(
+      req.body.password,
+      user.password
+    );
+    if (!validPassword)
+      return res
+        .status(400)
+        .send("The current password you entered is incorrect");
+
+    if (req.body.newPassword !== req.body.newPasswordConfirmation)
+      return res.status(400).send("Password must match");
+
+    const password = await bcrypt.hash(req.body.newPassword, 10);
+    const options = {
+      new: true,
+      select: "_id firstName lastName email gender birthDate status",
+    };
+
+    user = await User.findByIdAndUpdate(
       req.params.id,
       {
         password,
       },
       options
     );
-
     if (!user) return res.status(404).send("User not found");
-
     res.send(user);
   }
 );
@@ -206,17 +223,11 @@ const validateEditUser = (req) => {
   return Joi.validate(req, schema);
 };
 
-const validateStatus = (req) => {
-  const schema = {
-    isDeleted: Joi.boolean().required(),
-  };
-
-  return Joi.validate(req, schema);
-};
-
 const validatePassword = (req) => {
   const schema = {
     password: Joi.string().min(5).max(1000).required(),
+    newPassword: Joi.string().min(5).max(1000).required(),
+    newPasswordConfirmation: Joi.string().min(5).max(1000).required(),
   };
 
   return Joi.validate(req, schema);
