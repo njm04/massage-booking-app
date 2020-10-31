@@ -1,4 +1,7 @@
 {
   "jwtPrivateKey": "booking_jwtPrivateKey",
-  "ATLAS_DB": "booking_ATLAS_DB"
+  "ATLAS_DB": "booking_ATLAS_DB",
+  "email": "booking_email",
+  "password": "booking_emailPassword",
+  "EMAIL_SECRET": "booking_emailSecret"
 }

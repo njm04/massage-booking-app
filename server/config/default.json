@@ -1,4 +1,7 @@
 {
   "jwtPrivateKey": "",
-  "ATLAS_DB": ""
+  "ATLAS_DB": "",
+  "email": "",
+  "password": "",
+  "EMAIL_SECRET": ""
 }
