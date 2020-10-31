@@ -1,6 +1,8 @@
 const express = require("express");
 const Joi = require("joi");
 const bcrypt = require("bcryptjs");
+const config = require("config");
+const jwt = require("jsonwebtoken");
 const { User } = require("../models/user.model");
 const router = express.Router();
 
@@ -10,8 +12,9 @@ router.post("/", async (req, res) => {
 
   const user = await User.findOne({ email: req.body.email })
     .populate("userType")
-    .select("_id, name password firstName lastName status");
+    .select("_id, name password firstName lastName status confirmed");
   if (!user) return res.status(400).send("Invalid password or email");
+  if (!user.confirmed) return res.status(400).send("Please verify your email.");
   if (user.status === "suspend")
     return res.status(400).send("Account has been suspended");
 
@@ -20,6 +23,24 @@ router.post("/", async (req, res) => {
 
   const token = user.generateAuthToken();
   res.send(token);
+});
+
+router.get("/confirmation/:token", async (req, res) => {
+  try {
+    const {
+      user: { _id },
+    } = jwt.verify(req.params.token, config.get("EMAIL_SECRET"));
+
+    const user = await User.findById(_id);
+    if (user.confirmed) {
+      res.send("<h2>Email already verified!</h2>");
+    } else {
+      await User.updateOne({ _id: _id, confirmed: false }, { confirmed: true });
+      res.redirect("http://localhost:3000/confirmed");
+    }
+  } catch (error) {
+    res.status(500).send("Unexpected error occured");
+  }
 });
 
 const validate = (req) => {

@@ -29,6 +29,7 @@ const userSchema = new Schema(
       enum: ["active", "suspend"],
       default: "active",
     },
+    confirmed: { type: Boolean, default: false },
     password: { type: String, required: true },
     userType: { type: Schema.Types.ObjectId, ref: "UserType" },
     isDeleted: { type: Boolean, required: true, default: false },

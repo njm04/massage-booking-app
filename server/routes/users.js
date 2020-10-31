@@ -2,12 +2,16 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const Joi = require("joi");
 const _ = require("lodash");
+const nodemailer = require("nodemailer");
+const jwt = require("jsonwebtoken");
+const config = require("config");
 const { User, validate } = require("../models/user.model");
 const { Therapist } = require("../models/therapist.model");
 const { UserType } = require("../models/userType.model");
 const auth = require("../middleware/auth");
 const admin = require("../middleware/admin");
 const validateObjectId = require("../middleware/validateObjectId");
+const transporter = require("../startup/transporter");
 const router = express.Router();
 
 router.get("/", async (req, res) => {
@@ -61,6 +65,22 @@ router.post("/", async (req, res) => {
 
     user.password = await bcrypt.hash(user.password, 10);
     await user.save();
+    jwt.sign(
+      { user: _.pick(user, "_id") },
+      config.get("EMAIL_SECRET"),
+      { expiresIn: "1d" },
+      (error, emailToken) => {
+        if (!error) {
+          const url = `http://localhost:5000/api/auth/confirmation/${emailToken}`;
+
+          transporter.sendMail({
+            to: user.email,
+            subject: "Confirm Email",
+            html: `Please click this email to confirm your email: <a href="${url}">${url}</a>`,
+          });
+        }
+      }
+    );
     const token = user.generateAuthToken();
     user = await User.findUserByIdAndPopulate(user._id);
     res.header("x-auth-token", token).send(user);
