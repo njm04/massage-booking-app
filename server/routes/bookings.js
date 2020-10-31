@@ -1,19 +1,16 @@
 const express = require("express");
-const jwt = require("jsonwebtoken");
 const Fawn = require("fawn");
 const Joi = require("joi");
 const mongoose = require("mongoose");
+const moment = require("moment");
 const { Booking, validate } = require("../models/booking.model");
-// const verifyToken = require("../utils/verifyToken");
 const auth = require("../middleware/auth");
 const therapist = require("../middleware/therapist");
 const validateObjectId = require("../middleware/validateObjectId");
+const transporter = require("../startup/transporter");
 const { User } = require("../models/user.model");
-const { Therapist } = require("../models/therapist.model");
 const { UserType } = require("../models/userType.model");
-
 const router = express.Router();
-const secret_key = process.env.SECRET_KEY;
 
 const UserTypesEnum = Object.freeze({
   ADMIN: "admin",
@@ -24,8 +21,10 @@ const UserTypesEnum = Object.freeze({
 Fawn.init(mongoose);
 
 router.post("/", auth, async (req, res) => {
-  const { userType: userTypeId, _id: userId } = req.user;
-
+  const {
+    userType: { _id: userTypeId },
+    _id: userId,
+  } = req.user;
   const { error } = validate(req.body, req.user);
   if (error) return res.status(400).send(error.details[0].message);
 
@@ -89,6 +88,15 @@ router.post("/", auth, async (req, res) => {
       )
       .run();
 
+    if (req.user.userType.name === "admin") {
+      transporter.sendMail({
+        to: booking.customer.email,
+        subject: "Appointment Details",
+        html: `Thank you for doing business with us. 
+        Your scheduled appointment is on 
+        ${moment(booking.date).format("MMMM D YYYY, h:mm A")}.`,
+      });
+    }
     res.send(booking);
   } catch (error) {
     res.status(500).send("Unexpected error occured");
