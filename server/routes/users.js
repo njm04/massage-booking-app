@@ -28,8 +28,9 @@ router.get("/me", auth, async (req, res) => {
 });
 
 router.post("/", async (req, res) => {
+  let userType;
   if (!req.body.userType) {
-    const userType = await UserType.findOne({ name: "customer" });
+    userType = await UserType.findOne({ name: "customer" });
     req.body.userType = userType.id;
     req.body.status = "active";
   }
@@ -54,13 +55,13 @@ router.post("/", async (req, res) => {
       ])
     );
 
-    user.createdBy = _.pick(user, [
-      "_id",
-      "firstName",
-      "lastName",
-      "email",
-      "userType",
-    ]);
+    user.createdBy = {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      userType: { _id: userType._id, name: userType.name },
+    };
 
     user.password = await bcrypt.hash(user.password, 10);
     await user.save();
@@ -79,7 +80,7 @@ router.post("/create-user", [auth, admin], async (req, res) => {
   const { error } = validate(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
-  const userInfo = await User.findById(userId);
+  let userInfo = await User.findUserByIdAndPopulate(userId);
   if (!userInfo) return res.status(400).send("Invalid user.");
 
   let user = await User.findOne({ email: req.body.email });
@@ -106,19 +107,22 @@ router.post("/create-user", [auth, admin], async (req, res) => {
       user = new User(payload);
     }
 
-    user.createdBy = _.pick(userInfo, [
-      "_id",
-      "firstName",
-      "lastName",
-      "email",
-      "userType",
-    ]);
+    user.createdBy = {
+      _id: userInfo._id,
+      firstName: userInfo.firstName,
+      lastName: userInfo.lastName,
+      email: userInfo.email,
+      userType: { _id: userInfo.userType._id, name: userInfo.userType.name },
+    };
+
     user.password = await bcrypt.hash(user.password, 10);
     await user.save();
-    emailConfirmation(user);
     user = await User.findUserByIdAndPopulate(user._id);
+    console.log(user);
+    emailConfirmation(user);
     res.send(user);
   } catch (error) {
+    console.log(error);
     res.status(500).send("Unexpected error occured");
   }
 });
@@ -238,22 +242,34 @@ const validatePassword = (req) => {
 };
 
 const emailConfirmation = (user) => {
-  jwt.sign(
-    { user: _.pick(user, "_id") },
-    config.get("EMAIL_SECRET"),
-    { expiresIn: "1d" },
-    (error, emailToken) => {
-      if (!error) {
-        const url = `http://localhost:5000/api/auth/confirmation/${emailToken}`;
+  if (user.userType.name === "customer") {
+    jwt.sign(
+      { user: _.pick(user, "_id") },
+      config.get("EMAIL_SECRET"),
+      { expiresIn: "1d" },
+      (error, emailToken) => {
+        if (!error) {
+          const url = `http://localhost:5000/api/auth/confirmation/${emailToken}`;
 
-        transporter.sendMail({
-          to: user.email,
-          subject: "Confirm Email",
-          html: `Please click this link to confirm your email: <a href="${url}">${url}</a>`,
-        });
+          transporter.sendMail({
+            to: user.email,
+            subject: "Verify your email address",
+            html: emailMessage(user, url),
+          });
+        }
       }
-    }
-  );
+    );
+  }
+};
+
+const emailMessage = (user, url) => {
+  const style = "margin-bottom: 20px";
+  return `
+  <p style="${style}">Hi ${user.firstName} ${user.lastName}!</p>
+  <p style="${style}">Welcome to THE MASSAGE CLINIC. To verify your email so that you can access your account and start making appointments, click the following link:</p> 
+  <p style="${style}"><a href="${url}">${url}</a></p>
+  <p style="${style}">Thank you for choosing us.</p>
+  `;
 };
 
 module.exports = router;
