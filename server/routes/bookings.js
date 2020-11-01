@@ -10,6 +10,7 @@ const validateObjectId = require("../middleware/validateObjectId");
 const transporter = require("../startup/transporter");
 const { User } = require("../models/user.model");
 const { UserType } = require("../models/userType.model");
+const { Therapist } = require("../models/therapist.model");
 const router = express.Router();
 
 const UserTypesEnum = Object.freeze({
@@ -88,15 +89,11 @@ router.post("/", auth, async (req, res) => {
       )
       .run();
 
-    if (req.user.userType.name === "admin") {
-      transporter.sendMail({
-        to: booking.customer.email,
-        subject: "Appointment Details",
-        html: `Thank you for doing business with us. 
-        Your scheduled appointment is on 
-        ${moment(booking.date).format("MMMM D YYYY, h:mm A")}.`,
-      });
-    }
+    transporter.sendMail({
+      to: booking.customer.email,
+      subject: "Appointment Details",
+      html: emailMessage(booking),
+    });
     res.send(booking);
   } catch (error) {
     res.status(500).send("Unexpected error occured");
@@ -225,29 +222,32 @@ router.put("/delete/:id", [auth, validateObjectId], async (req, res) => {
   const options = { new: true };
   const { userType } = req.user;
   let booking;
+  try {
+    if (userType.name === "customer") {
+      booking = await Booking.findByIdAndUpdate(
+        req.params.id,
+        { status: "cancelled" },
+        options
+      );
+    } else {
+      booking = await Booking.findByIdAndUpdate(
+        req.params.id,
+        { isDeleted: true },
+        options
+      );
+    }
 
-  if (userType.name === "customer") {
-    booking = await Booking.findByIdAndUpdate(
-      req.params.id,
-      { status: "cancelled" },
-      options
+    if (!booking) return res.status(400).send("Booking not found");
+
+    await Therapist.updateOne(
+      { _id: booking.therapist._id },
+      { $pull: { reservations: { _id: booking._id } } }
     );
-  } else {
-    booking = await Booking.findByIdAndUpdate(
-      req.params.id,
-      { isDeleted: true },
-      options
-    );
+
+    res.send(booking);
+  } catch (error) {
+    res.status(500).send("Unexpected error occured");
   }
-
-  const therapist = await User.findById(booking.therapist._id);
-  if (!therapist) return res.status(400).send("Therapist not found.");
-  therapist.reservations.pull(req.params.id);
-  await therapist.save();
-
-  if (!booking) return res.status(400).send("Booking not found");
-
-  res.send(booking);
 });
 
 router.get("/update-view/:id", [auth, validateObjectId], async (req, res) => {
@@ -307,6 +307,29 @@ const validateStatus = (req) => {
   };
 
   return Joi.validate(req, schema);
+};
+
+const emailMessage = (booking) => {
+  const style = "margin-bottom: 20px";
+  return `
+  <p style="${style}">Hi ${booking.customer.firstName} ${
+    booking.customer.lastName
+  }!</p>
+  <p style="${style}">You have successfully reserved appointment! Please see the appointment details below.</p>
+
+  <h2 style="${style}">Appointment details:</h2> 
+  <p><strong>When: </strong>${moment(booking.date).format(
+    "MMMM D YYYY, h:mm A"
+  )}</p> 
+  <p><strong>Massage type: </strong>${booking.massageType}</p> 
+  <p><strong>Duration: </strong>${booking.duration} minutes</p> 
+  <p style="${style}"><strong>Massage therapist: </strong>${
+    booking.therapist.firstName
+  } ${booking.therapist.lastName}</p> 
+
+  <p style="${style}">Please come 15 minutes before your scheduled appointment.</p>
+  <p style="${style}">Thank you for choosing us.</p>
+  `;
 };
 
 module.exports = router;
