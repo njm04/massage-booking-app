@@ -19,7 +19,11 @@ const userSchema = new Schema(
       type: new Schema({
         firstName: { type: String, required: true },
         lastName: { type: String, required: true },
-        userType: { type: String, required: true },
+        userType: {
+          type: new Schema({
+            name: { type: String, required: true },
+          }),
+        },
       }),
       required: true,
     },
@@ -29,7 +33,6 @@ const userSchema = new Schema(
       enum: ["active", "suspend"],
       default: "active",
     },
-    confirmed: { type: Boolean, default: false },
     password: { type: String, required: true },
     userType: { type: Schema.Types.ObjectId, ref: "UserType" },
     isDeleted: { type: Boolean, required: true, default: false },
@@ -61,7 +64,7 @@ userSchema.statics.findUserByIdAndPopulate = function (id) {
   return this.findById(id)
     .populate("userType", "_id name")
     .select(
-      "_id firstName lastName email isAvailable reservations gender birthDate status"
+      "_id firstName lastName email isAvailable reservations gender birthDate status createdBy"
     );
 };
 

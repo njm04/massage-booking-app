@@ -6,6 +6,7 @@ const jwt = require("jsonwebtoken");
 const config = require("config");
 const { User, validate } = require("../models/user.model");
 const { Therapist } = require("../models/therapist.model");
+const { Customer } = require("../models/customer.model");
 const { UserType } = require("../models/userType.model");
 const auth = require("../middleware/auth");
 const admin = require("../middleware/admin");
@@ -17,7 +18,7 @@ router.get("/", async (req, res) => {
   const users = await User.find()
     .populate("userType", "_id name")
     .select(
-      "_id firstName lastName email isAvailable reservations gender birthDate status"
+      "_id firstName lastName email isAvailable reservations gender birthDate status createdBy"
     );
   res.send(users);
 });
@@ -42,7 +43,7 @@ router.post("/", async (req, res) => {
   if (user) return res.status(400).send("User already exists");
 
   try {
-    user = new User(
+    user = new Customer(
       _.pick(req.body, [
         "firstName",
         "lastName",
@@ -103,6 +104,8 @@ router.post("/create-user", [auth, admin], async (req, res) => {
 
     if (userType.name === "therapist") {
       user = new Therapist(payload);
+    } else if (userType.name === "customer") {
+      user = new Customer(payload);
     } else {
       user = new User(payload);
     }
@@ -118,11 +121,9 @@ router.post("/create-user", [auth, admin], async (req, res) => {
     user.password = await bcrypt.hash(user.password, 10);
     await user.save();
     user = await User.findUserByIdAndPopulate(user._id);
-    console.log(user);
     emailConfirmation(user);
     res.send(user);
   } catch (error) {
-    console.log(error);
     res.status(500).send("Unexpected error occured");
   }
 });
