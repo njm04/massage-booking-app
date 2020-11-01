@@ -33,7 +33,7 @@ router.get("/confirmation/:token", async (req, res) => {
 
     const user = await User.findById(_id);
     if (user.confirmed) {
-      res.send("<h2>Email already verified!</h2>");
+      res.render("emailConfirmed");
     } else {
       await User.updateOne({ _id: _id, confirmed: false }, { confirmed: true });
       res.redirect("http://localhost:3000/confirmed");
