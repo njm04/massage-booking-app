@@ -250,7 +250,7 @@ const emailConfirmation = (user) => {
       { expiresIn: "1d" },
       (error, emailToken) => {
         if (!error) {
-          const url = `http://localhost:5000/api/auth/confirmation/${emailToken}`;
+          const url = `${config.get("URI")}/auth/confirmation/${emailToken}`;
 
           transporter.sendMail({
             to: user.email,

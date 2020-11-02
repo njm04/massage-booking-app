@@ -3,5 +3,6 @@
   "ATLAS_DB": "",
   "email": "",
   "password": "",
-  "EMAIL_SECRET": ""
+  "EMAIL_SECRET": "",
+  "URI": "https://rocky-chamber-39263.herokuapp.com/api"
 }
