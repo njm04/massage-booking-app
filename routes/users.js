@@ -243,7 +243,7 @@ const validatePassword = (req) => {
 };
 
 const emailConfirmation = (user) => {
-  if (user.userType.name === "customer") {
+  if (user.__t === "customer") {
     jwt.sign(
       { user: _.pick(user, "_id") },
       config.get("EMAIL_SECRET"),
