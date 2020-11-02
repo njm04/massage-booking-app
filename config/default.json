@@ -4,5 +4,6 @@
   "email": "",
   "password": "",
   "EMAIL_SECRET": "",
-  "URI": "https://rocky-chamber-39263.herokuapp.com/api"
+  "URI": "https://rocky-chamber-39263.herokuapp.com/api",
+  "FRONT_END_LOGIN_URI": "https://the-masssage-clinic.herokuapp.com/login"
 }

@@ -39,7 +39,7 @@ router.get("/confirmation/:token", async (req, res) => {
       res.render("emailConfirmed");
     } else {
       await Customer.updateOne({ _id: user._id }, { confirmed: true });
-      res.redirect("http://localhost:3000/confirmed");
+      res.redirect(config.get("FRONT_END_LOGIN_URI"));
     }
   } catch (error) {
     res.status(500).send("Unexpected error occured");
