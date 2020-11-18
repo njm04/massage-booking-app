@@ -30,7 +30,7 @@ const userSchema = new Schema(
     status: {
       type: String,
       required: true,
-      enum: ["active", "suspend"],
+      enum: ["active", "suspend", "unverified"],
       default: "active",
     },
     password: { type: String, required: true },

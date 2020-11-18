@@ -33,7 +33,7 @@ router.post("/", async (req, res) => {
   if (!req.body.userType) {
     userType = await UserType.findOne({ name: "customer" });
     req.body.userType = userType.id;
-    req.body.status = "active";
+    req.body.status = "unverified";
   }
 
   const { error } = validate(req.body);
