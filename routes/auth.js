@@ -38,7 +38,10 @@ router.get("/confirmation/:token", async (req, res) => {
     if (user.confirmed) {
       res.render("emailConfirmed");
     } else {
-      await Customer.updateOne({ _id: user._id }, { confirmed: true });
+      await Customer.updateOne(
+        { _id: user._id },
+        { confirmed: true, status: "active" }
+      );
       res.redirect(config.get("CONFIRMED_URI"));
     }
   } catch (error) {
