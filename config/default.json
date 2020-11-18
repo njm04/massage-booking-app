@@ -4,6 +4,6 @@
   "email": "",
   "password": "",
   "EMAIL_SECRET": "",
-  "URI": "http://localhost:5000/api",
-  "CONFIRMED_URI": "http://localhost:3000/confirmed"
+  "URI": "https://rocky-chamber-39263.herokuapp.com/api",
+  "CONFIRMED_URI": "https://the-masssage-clinic.herokuapp.com/confirmed"
 }
