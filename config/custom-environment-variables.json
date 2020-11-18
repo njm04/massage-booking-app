@@ -3,5 +3,7 @@
   "ATLAS_DB": "booking_ATLAS_DB",
   "email": "booking_email",
   "password": "booking_emailPassword",
-  "EMAIL_SECRET": "booking_emailSecret"
+  "EMAIL_SECRET": "booking_emailSecret",
+  "URI": "https://rocky-chamber-39263.herokuapp.com/api",
+  "CONFIRMED_URI": "https://the-masssage-clinic.herokuapp.com/confirmed"
 }
