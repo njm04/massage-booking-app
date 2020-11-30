@@ -219,6 +219,49 @@ router.put(
   }
 );
 
+router.put(
+  "/update-status/:id",
+  [auth, admin, validateObjectId],
+  async (req, res) => {
+    const options = {
+      new: true,
+      select: "_id firstName lastName email gender birthDate status",
+    };
+
+    const { error } = validateStatus(req.body);
+    if (error) return res.status(400).send(error.details[0].message);
+
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(400).send("User not found");
+
+    if (
+      user.__t === "therapist" &&
+      user.reservations.length > 0 &&
+      req.body.status === "suspend"
+    ) {
+      const name = user.firstName + " " + user.lastName;
+      return res
+        .status(400)
+        .send(`Cant suspend ${name}'s account due to existing reservations.`);
+    }
+
+    try {
+      const user = await User.findByIdAndUpdate(
+        req.params.id,
+        {
+          status: req.body.status,
+        },
+        options
+      ).populate("userType", "_id name");
+
+      if (!user) return res.status(400).send("User not found");
+      res.send(user);
+    } catch (error) {
+      res.status(500).send("Unexpected error occured");
+    }
+  }
+);
+
 const validateEditUser = (req) => {
   const schema = {
     email: Joi.string().min(5).max(255).email().required(),
@@ -237,6 +280,14 @@ const validatePassword = (req) => {
     password: Joi.string().min(5).max(1000).required(),
     newPassword: Joi.string().min(5).max(1000).required(),
     newPasswordConfirmation: Joi.string().min(5).max(1000).required(),
+  };
+
+  return Joi.validate(req, schema);
+};
+
+const validateStatus = (req) => {
+  const schema = {
+    status: Joi.string().valid("active", "suspend").required(),
   };
 
   return Joi.validate(req, schema);
