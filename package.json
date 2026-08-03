@@ -2,36 +2,38 @@
   "name": "server",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "type": "module",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "engines": {
-    "node": "12.16.1"
+    "node": ">=18"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "body-parser": "^1.19.0",
-    "compression": "^1.7.4",
-    "config": "^3.3.2",
-    "cors": "^2.8.5",
-    "cron": "^1.8.2",
-    "dotenv": "^8.2.0",
-    "express": "^4.17.1",
+    "bcryptjs": "^3.0.3",
+    "compression": "^1.8.1",
+    "config": "^4.4.2",
+    "cors": "^2.8.6",
+    "cron": "^4.4.0",
+    "dayjs": "^1.11.21",
+    "dotenv": "^17.4.2",
+    "express": "^4.22.2",
+    "swagger-jsdoc": "^6.3.0",
+    "swagger-ui-express": "^5.0.1",
     "express-async-errors": "^3.1.1",
-    "express-handlebars": "^5.2.0",
-    "fawn": "^2.1.5",
-    "helmet": "^4.2.0",
-    "joi": "^14.3.1",
-    "joi-objectid": "^3.0.1",
-    "jsonwebtoken": "^8.5.1",
-    "lodash": "^4.17.20",
-    "mongoose": "^5.10.8",
-    "nodemailer": "^6.4.14",
-    "winston": "^3.3.3"
+    "express-handlebars": "^9.0.1",
+    "helmet": "^8.3.0",
+    "joi": "^18.2.3",
+    "joi-objectid": "^4.0.2",
+    "jsonwebtoken": "^9.0.3",
+    "lodash": "^4.18.1",
+    "mongoose": "^8.10.2",
+    "nodemailer": "^9.0.3",
+    "winston": "^3.19.0"
   }
 }

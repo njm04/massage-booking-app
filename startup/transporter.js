@@ -1,10 +1,10 @@
-const nodemailer = require("nodemailer");
-const config = require("config");
+import nodemailer from "nodemailer";
+import { getConfigValue } from "./env.js";
 
-module.exports = nodemailer.createTransport({
+export default nodemailer.createTransport({
   service: "Gmail",
   auth: {
-    user: config.get("email"),
-    pass: config.get("password"),
+    user: getConfigValue("email", "booking_email"),
+    pass: getConfigValue("password", "booking_emailPassword"),
   },
 });

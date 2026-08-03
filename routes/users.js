@@ -1,17 +1,17 @@
-const express = require("express");
-const bcrypt = require("bcryptjs");
-const Joi = require("joi");
-const _ = require("lodash");
-const jwt = require("jsonwebtoken");
-const config = require("config");
-const { User, validate } = require("../models/user.model");
-const { Therapist } = require("../models/therapist.model");
-const { Customer } = require("../models/customer.model");
-const { UserType } = require("../models/userType.model");
-const auth = require("../middleware/auth");
-const admin = require("../middleware/admin");
-const validateObjectId = require("../middleware/validateObjectId");
-const transporter = require("../startup/transporter");
+import express from "express";
+import bcrypt from "bcryptjs";
+import Joi from "joi";
+import _ from "lodash";
+import jwt from "jsonwebtoken";
+import { getConfigValue } from "../startup/env.js";
+import { User, validate } from "../models/user.model.js";
+import { Therapist } from "../models/therapist.model.js";
+import { Customer } from "../models/customer.model.js";
+import { UserType } from "../models/userType.model.js";
+import auth from "../middleware/auth.js";
+import admin from "../middleware/admin.js";
+import validateObjectId from "../middleware/validateObjectId.js";
+import transporter from "../startup/transporter.js";
 const router = express.Router();
 
 router.get("/", async (req, res) => {
@@ -29,20 +29,24 @@ router.get("/me", auth, async (req, res) => {
 });
 
 router.post("/", async (req, res) => {
-  let userType;
-  if (!req.body.userType) {
-    userType = await UserType.findOne({ name: "customer" });
+  try {
+    let userType = req.body.userType
+      ? await UserType.findById(req.body.userType)
+      : await UserType.findOne({ name: "customer" });
+
+    if (!userType) {
+      userType = await UserType.create({ name: "customer" });
+    }
+
     req.body.userType = userType.id;
     req.body.status = "unverified";
-  }
 
-  const { error } = validate(req.body);
-  if (error) return res.status(400).send(error.details[0].message);
+    const { error } = validate(req.body);
+    if (error) return res.status(400).send(error.details[0].message);
 
-  let user = await User.findOne({ email: req.body.email });
-  if (user) return res.status(400).send("User already exists");
+    let user = await User.findOne({ email: req.body.email });
+    if (user) return res.status(400).send("User already exists");
 
-  try {
     user = new Customer(
       _.pick(req.body, [
         "firstName",
@@ -57,20 +61,23 @@ router.post("/", async (req, res) => {
     );
 
     user.createdBy = {
-      _id: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
-      email: user.email,
-      userType: { _id: userType._id, name: userType.name },
+      userType: userType.name,
     };
 
     user.password = await bcrypt.hash(user.password, 10);
     await user.save();
-    emailConfirmation(user);
+    try {
+      await emailConfirmation(user);
+    } catch (emailError) {
+      console.warn("Email confirmation skipped", emailError);
+    }
     const token = user.generateAuthToken();
     user = await User.findUserByIdAndPopulate(user._id);
     res.header("x-auth-token", token).send(user);
   } catch (error) {
+    console.error(error);
     res.status(500).send("Unexpected error occured");
   }
 });
@@ -111,17 +118,19 @@ router.post("/create-user", [auth, admin], async (req, res) => {
     }
 
     user.createdBy = {
-      _id: userInfo._id,
       firstName: userInfo.firstName,
       lastName: userInfo.lastName,
-      email: userInfo.email,
-      userType: { _id: userInfo.userType._id, name: userInfo.userType.name },
+      userType: userInfo.userType.name,
     };
 
     user.password = await bcrypt.hash(user.password, 10);
     await user.save();
     user = await User.findUserByIdAndPopulate(user._id);
-    emailConfirmation(user);
+    try {
+      await emailConfirmation(user);
+    } catch (emailError) {
+      console.warn("Email confirmation skipped", emailError);
+    }
     res.send(user);
   } catch (error) {
     res.status(500).send("Unexpected error occured");
@@ -140,7 +149,7 @@ router.put("/:id", [auth, admin, validateObjectId], async (req, res) => {
   if (!user) return res.status(400).send("User not found");
 
   if (
-    user.__t === "therapist" &&
+    (user.kind || user.__t) === "therapist" &&
     user.reservations.length > 0 &&
     req.body.status === "suspend"
   ) {
@@ -235,7 +244,7 @@ router.put(
     if (!user) return res.status(400).send("User not found");
 
     if (
-      user.__t === "therapist" &&
+      (user.kind || user.__t) === "therapist" &&
       user.reservations.length > 0 &&
       req.body.status === "suspend"
     ) {
@@ -263,54 +272,64 @@ router.put(
 );
 
 const validateEditUser = (req) => {
-  const schema = {
+  const schema = Joi.object({
     email: Joi.string().min(5).max(255).email().required(),
     firstName: Joi.string().required(),
     lastName: Joi.string().required(),
     birthDate: Joi.date().required(),
     gender: Joi.string().required(),
     status: Joi.string().required(),
-  };
+  });
 
-  return Joi.validate(req, schema);
+  return schema.validate(req);
 };
 
 const validatePassword = (req) => {
-  const schema = {
+  const schema = Joi.object({
     password: Joi.string().min(5).max(1000).required(),
     newPassword: Joi.string().min(5).max(1000).required(),
     newPasswordConfirmation: Joi.string().min(5).max(1000).required(),
-  };
+  });
 
-  return Joi.validate(req, schema);
+  return schema.validate(req);
 };
 
 const validateStatus = (req) => {
-  const schema = {
+  const schema = Joi.object({
     status: Joi.string().valid("active", "suspend").required(),
-  };
+  });
 
-  return Joi.validate(req, schema);
+  return schema.validate(req);
 };
 
-const emailConfirmation = (user) => {
-  if (user.__t === "customer") {
-    jwt.sign(
-      { user: _.pick(user, "_id") },
-      config.get("EMAIL_SECRET"),
-      { expiresIn: "1d" },
-      (error, emailToken) => {
-        if (!error) {
-          const url = `${config.get("URI")}/auth/confirmation/${emailToken}`;
+const emailConfirmation = async (user) => {
+  const userKind = user.kind || user.__t || user.constructor.modelName;
 
-          transporter.sendMail({
-            to: user.email,
-            subject: "Verify your email address",
-            html: emailMessage(user, url),
-          });
-        }
-      }
-    );
+  if (userKind === "customer") {
+    try {
+      const emailToken = await new Promise((resolve, reject) => {
+        jwt.sign(
+          { user: _.pick(user, "_id") },
+          getConfigValue("EMAIL_SECRET", "booking_emailSecret"),
+          { expiresIn: "1d" },
+          (error, token) => {
+            if (error) return reject(error);
+            resolve(token);
+          }
+        );
+      });
+
+      const url = `${getConfigValue("URI", "booking_URI")}/auth/confirmation/${emailToken}`;
+      await transporter.sendMail({
+        to: user.email,
+        subject: "Verify your email address",
+        html: emailMessage(user, url),
+      });
+
+      console.log(`Verification email sent to ${user.email}`);
+    } catch (error) {
+      console.error("Email confirmation failed", error);
+    }
   }
 };
 
@@ -324,4 +343,4 @@ const emailMessage = (user, url) => {
   `;
 };
 
-module.exports = router;
+export default router;

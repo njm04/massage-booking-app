@@ -1,23 +1,19 @@
-const config = require("config");
+import winston from "winston";
+import { getConfigValue } from "./env.js";
 
-module.exports = () => {
-  if (!config.get("jwtPrivateKey")) {
-    throw new Error("FATAL ERROR: jwtPrivateKey is not defined");
-  }
+export default () => {
+  const required = [
+    ["jwtPrivateKey", "booking_jwtPrivateKey"],
+    ["ATLAS_DB", "booking_ATLAS_DB"],
+    ["email", "booking_email"],
+    ["password", "booking_emailPassword"],
+    ["EMAIL_SECRET", "booking_emailSecret"],
+  ];
 
-  if (!config.get("ATLAS_DB")) {
-    throw new Error("FATAL ERROR: ATLAS_DB is not defined");
-  }
-
-  if (!config.get("email")) {
-    throw new Error("FATAL ERROR: email is not defined");
-  }
-
-  if (!config.get("password")) {
-    throw new Error("FATAL ERROR: email password is not defined");
-  }
-
-  if (!config.get("EMAIL_SECRET")) {
-    throw new Error("FATAL ERROR: EMAIL_SECRET is not defined");
+  for (const [key, envKey] of required) {
+    const value = getConfigValue(key, envKey);
+    if (!value) {
+      winston.warn(`Configuration value '${envKey}' is not set; continuing without it.`);
+    }
   }
 };

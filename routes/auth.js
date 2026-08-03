@@ -1,10 +1,10 @@
-const express = require("express");
-const Joi = require("joi");
-const bcrypt = require("bcryptjs");
-const config = require("config");
-const jwt = require("jsonwebtoken");
-const { User } = require("../models/user.model");
-const { Customer } = require("../models/customer.model");
+import express from "express";
+import Joi from "joi";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { getConfigValue } from "../startup/env.js";
+import { User } from "../models/user.model.js";
+import { Customer } from "../models/customer.model.js";
 const router = express.Router();
 
 router.post("/", async (req, res) => {
@@ -32,7 +32,7 @@ router.get("/confirmation/:token", async (req, res) => {
   try {
     const {
       user: { _id },
-    } = jwt.verify(req.params.token, config.get("EMAIL_SECRET"));
+    } = jwt.verify(req.params.token, getConfigValue("EMAIL_SECRET", "booking_emailSecret"));
 
     const user = await Customer.findById(_id);
     if (user.confirmed) {
@@ -42,7 +42,7 @@ router.get("/confirmation/:token", async (req, res) => {
         { _id: user._id },
         { confirmed: true, status: "active" }
       );
-      res.redirect(config.get("CONFIRMED_URI"));
+      res.redirect(getConfigValue("CONFIRMED_URI", "booking_CONFIRMED_URI"));
     }
   } catch (error) {
     res.status(500).send("Unexpected error occured");
@@ -50,12 +50,12 @@ router.get("/confirmation/:token", async (req, res) => {
 });
 
 const validate = (req) => {
-  const schema = {
+  const schema = Joi.object({
     email: Joi.string().min(5).max(255).email().required(),
     password: Joi.string().min(4).max(1000).required(),
-  };
+  });
 
-  return Joi.validate(req, schema);
+  return schema.validate(req);
 };
 
-module.exports = router;
+export default router;

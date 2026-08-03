@@ -1,16 +1,15 @@
-const express = require("express");
-const Fawn = require("fawn");
-const Joi = require("joi");
-const mongoose = require("mongoose");
-const moment = require("moment");
-const { Booking, validate } = require("../models/booking.model");
-const auth = require("../middleware/auth");
-const therapist = require("../middleware/therapist");
-const validateObjectId = require("../middleware/validateObjectId");
-const transporter = require("../startup/transporter");
-const { User } = require("../models/user.model");
-const { UserType } = require("../models/userType.model");
-const { Therapist } = require("../models/therapist.model");
+import express from "express";
+import Joi from "joi";
+import mongoose from "mongoose";
+import dayjs from "dayjs";
+import { Booking, validate } from "../models/booking.model.js";
+import auth from "../middleware/auth.js";
+import therapist from "../middleware/therapist.js";
+import validateObjectId from "../middleware/validateObjectId.js";
+import transporter from "../startup/transporter.js";
+import { User } from "../models/user.model.js";
+import { UserType } from "../models/userType.model.js";
+import { Therapist } from "../models/therapist.model.js";
 const router = express.Router();
 
 const UserTypesEnum = Object.freeze({
@@ -18,8 +17,6 @@ const UserTypesEnum = Object.freeze({
   THERAPIST: "therapist",
   CUSTOMER: "customer",
 });
-
-Fawn.init(mongoose);
 
 router.post("/", auth, async (req, res) => {
   const {
@@ -68,6 +65,9 @@ router.post("/", auth, async (req, res) => {
     date: req.body.date,
   });
 
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const reservation = {
       _id: booking._id,
@@ -77,17 +77,18 @@ router.post("/", auth, async (req, res) => {
       date: booking.date,
     };
 
-    new Fawn.Task()
-      .save("bookings", booking)
-      .update(
-        "users",
-        { _id: therapist._id },
-        {
-          isAvailable: false,
-          $push: { reservations: reservation },
-        }
-      )
-      .run();
+    await booking.save({ session });
+
+    await User.updateOne(
+      { _id: therapist._id },
+      {
+        isAvailable: false,
+        $push: { reservations: reservation },
+      },
+      { session }
+    );
+
+    await session.commitTransaction();
 
     transporter.sendMail({
       to: booking.customer.email,
@@ -96,7 +97,10 @@ router.post("/", auth, async (req, res) => {
     });
     res.send(booking);
   } catch (error) {
+    await session.abortTransaction();
     res.status(500).send("Unexpected error occured");
+  } finally {
+    session.endSession();
   }
 });
 
@@ -278,19 +282,27 @@ router.put(
         if (!booking) return res.status(400).send("Appointment not found");
         res.send(booking);
       } else {
-        await new Fawn.Task()
-          .update(
-            "bookings",
+        const session = await mongoose.startSession();
+        session.startTransaction();
+
+        try {
+          await Booking.updateOne(
             { _id: booking._id },
             { status: req.body.status },
-            { new: true }
-          )
-          .update(
-            "users",
+            { session }
+          );
+          await User.updateOne(
             { _id: booking.therapist._id },
-            { $pull: { reservations: { _id: booking._id } } }
-          )
-          .run();
+            { $pull: { reservations: { _id: booking._id } } },
+            { session }
+          );
+          await session.commitTransaction();
+        } catch (error) {
+          await session.abortTransaction();
+          throw error;
+        } finally {
+          session.endSession();
+        }
 
         booking = await Booking.findById(req.params.id);
         res.send(booking);
@@ -302,11 +314,11 @@ router.put(
 );
 
 const validateStatus = (req) => {
-  const schema = {
+  const schema = Joi.object({
     status: Joi.string().required(),
-  };
+  });
 
-  return Joi.validate(req, schema);
+  return schema.validate(req);
 };
 
 const emailMessage = (booking) => {
@@ -318,7 +330,7 @@ const emailMessage = (booking) => {
   <p style="${style}">You have successfully reserved appointment! Please see the appointment details below.</p>
 
   <h2 style="${style}">Appointment details:</h2> 
-  <p><strong>When: </strong>${moment(booking.date).format(
+  <p><strong>When: </strong>${dayjs(booking.date).format(
     "MMMM D YYYY, h:mm A"
   )}</p> 
   <p><strong>Massage type: </strong>${booking.massageType}</p> 
@@ -332,4 +344,4 @@ const emailMessage = (booking) => {
   `;
 };
 
-module.exports = router;
+export default router;

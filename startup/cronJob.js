@@ -1,8 +1,8 @@
-const CronJob = require("cron").CronJob;
-const winston = require("winston");
-const { Booking } = require("../models/booking.model");
+import { CronJob } from "cron";
+import winston from "winston";
+import { Booking } from "../models/booking.model.js";
 
-module.exports = () => {
+export default () => {
   const job = new CronJob("0 0 * * *", async () => {
     winston.info("You will see this message everyday at midnight");
     const result = await Booking.updateMany(

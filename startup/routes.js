@@ -1,27 +1,33 @@
-const express = require("express");
-var path = require("path");
-const cors = require("cors");
-var exphbs = require("express-handlebars");
-const users = require("../routes/users");
-const auth = require("../routes/auth");
-const bookings = require("../routes/bookings");
-const userTypes = require("../routes/userTypes");
-const error = require("../middleware/error");
+import express from "express";
+import path from "path";
+import { fileURLToPath } from "url";
+import cors from "cors";
+import { create } from "express-handlebars";
+import users from "../routes/users.js";
+import auth from "../routes/auth.js";
+import bookings from "../routes/bookings.js";
+import userTypes from "../routes/userTypes.js";
+import error from "../middleware/error.js";
+import { swaggerDocs, swaggerUiMiddleware } from "../docs/swagger.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const corsOptions = {
   exposedHeaders: "x-auth-token",
 };
-module.exports = (app) => {
-  app.engine(
-    "handlebars",
-    exphbs({
-      defaultLayout: "main",
-    })
-  );
+
+export default (app) => {
+  const hbs = create({
+    defaultLayout: "main",
+  });
+
+  app.engine("handlebars", hbs.engine);
   app.set("views", path.join(__dirname, "../views"));
   app.set("view engine", "handlebars");
   app.use(express.json());
   app.use(cors(corsOptions));
+  app.use("/api-docs", swaggerUiMiddleware.serve, swaggerUiMiddleware.setup(swaggerDocs));
   app.use("/api/users", users);
   app.use("/api/auth", auth);
   app.use("/api/bookings", bookings);
