@@ -47,7 +47,7 @@
         }
       },
       "post": {
-        "summary": "Create a user",
+        "summary": "Register a customer",
         "tags": ["Users"],
         "requestBody": {
           "required": true,
@@ -55,14 +55,23 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["firstName", "lastName", "email", "birthDate", "gender", "password"],
+                "required": [
+                  "firstName",
+                  "lastName",
+                  "email",
+                  "birthDate",
+                  "gender",
+                  "password"
+                ],
                 "properties": {
                   "firstName": { "type": "string" },
                   "lastName": { "type": "string" },
-                  "email": { "type": "string" },
+                  "email": { "type": "string", "format": "email" },
                   "birthDate": { "type": "string", "format": "date" },
                   "gender": { "type": "string" },
-                  "password": { "type": "string" }
+                  "password": { "type": "string" },
+                  "userType": { "type": "string" },
+                  "status": { "type": "string" }
                 }
               }
             }
@@ -71,6 +80,9 @@
         "responses": {
           "200": {
             "description": "User created successfully"
+          },
+          "400": {
+            "description": "Validation error or duplicate user"
           }
         }
       }
@@ -87,6 +99,9 @@
         "responses": {
           "200": {
             "description": "Authenticated user profile"
+          },
+          "401": {
+            "description": "Unauthorized"
           }
         }
       }
@@ -106,11 +121,19 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["firstName", "lastName", "email", "birthDate", "gender", "password", "userType"],
+                "required": [
+                  "firstName",
+                  "lastName",
+                  "email",
+                  "birthDate",
+                  "gender",
+                  "password",
+                  "userType"
+                ],
                 "properties": {
                   "firstName": { "type": "string" },
                   "lastName": { "type": "string" },
-                  "email": { "type": "string" },
+                  "email": { "type": "string", "format": "email" },
                   "birthDate": { "type": "string", "format": "date" },
                   "gender": { "type": "string" },
                   "password": { "type": "string" },
@@ -124,6 +147,195 @@
         "responses": {
           "200": {
             "description": "User created successfully by admin"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/api/users/{id}": {
+      "put": {
+        "summary": "Update a user by id",
+        "tags": ["Users"],
+        "security": [
+          {
+            "xAuthToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "firstName",
+                  "lastName",
+                  "birthDate",
+                  "gender",
+                  "status"
+                ],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "firstName": { "type": "string" },
+                  "lastName": { "type": "string" },
+                  "birthDate": { "type": "string", "format": "date" },
+                  "gender": { "type": "string" },
+                  "status": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User updated successfully"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a user by id",
+        "tags": ["Users"],
+        "security": [
+          {
+            "xAuthToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User deleted successfully"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      }
+    },
+    "/api/users/change-password/{id}": {
+      "put": {
+        "summary": "Change a user's password",
+        "tags": ["Users"],
+        "security": [
+          {
+            "xAuthToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "password",
+                  "newPassword",
+                  "newPasswordConfirmation"
+                ],
+                "properties": {
+                  "password": { "type": "string" },
+                  "newPassword": { "type": "string" },
+                  "newPasswordConfirmation": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password changed successfully"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      }
+    },
+    "/api/users/update-status/{id}": {
+      "put": {
+        "summary": "Update a user's status",
+        "tags": ["Users"],
+        "security": [
+          {
+            "xAuthToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["status"],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": ["active", "suspend"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Status updated successfully"
+          },
+          "400": {
+            "description": "Validation error"
           }
         }
       }
@@ -157,7 +369,17 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["therapist", "massageType", "duration", "contactNumber", "address", "state", "city", "zip", "date"],
+                "required": [
+                  "therapist",
+                  "massageType",
+                  "duration",
+                  "contactNumber",
+                  "address",
+                  "state",
+                  "city",
+                  "zip",
+                  "date"
+                ],
                 "properties": {
                   "therapist": { "type": "string" },
                   "massageType": { "type": "string" },
@@ -297,7 +519,7 @@
                 "type": "object",
                 "required": ["email", "password"],
                 "properties": {
-                  "email": { "type": "string" },
+                  "email": { "type": "string", "format": "email" },
                   "password": { "type": "string" }
                 }
               }
@@ -307,6 +529,9 @@
         "responses": {
           "200": {
             "description": "Authentication successful"
+          },
+          "400": {
+            "description": "Invalid credentials"
           }
         }
       }
