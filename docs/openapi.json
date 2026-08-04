@@ -48,6 +48,7 @@
       },
       "post": {
         "summary": "Register a customer",
+        "description": "Public registration endpoint for customers. The backend assigns the user type and status automatically.",
         "tags": ["Users"],
         "requestBody": {
           "required": true,
@@ -69,10 +70,9 @@
                   "email": { "type": "string", "format": "email" },
                   "birthDate": { "type": "string", "format": "date" },
                   "gender": { "type": "string" },
-                  "password": { "type": "string" },
-                  "userType": { "type": "string" },
-                  "status": { "type": "string" }
-                }
+                  "password": { "type": "string" }
+                },
+                "additionalProperties": false
               }
             }
           }
@@ -109,6 +109,7 @@
     "/api/users/create-user": {
       "post": {
         "summary": "Create a user as an admin",
+        "description": "Admin-only endpoint for creating a user. The backend assigns the createdBy metadata and handles status defaults.",
         "tags": ["Users"],
         "security": [
           {
@@ -137,9 +138,9 @@
                   "birthDate": { "type": "string", "format": "date" },
                   "gender": { "type": "string" },
                   "password": { "type": "string" },
-                  "userType": { "type": "string" },
-                  "status": { "type": "string" }
-                }
+                  "userType": { "type": "string" }
+                },
+                "additionalProperties": false
               }
             }
           }
