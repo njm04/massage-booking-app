@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import { getConfigValue } from "../startup/env.js";
 import { User } from "../models/user.model.js";
 import { Customer } from "../models/customer.model.js";
+import { UserType } from "../models/userType.model.js";
 const router = express.Router();
 
 router.post("/", async (req, res) => {
@@ -12,11 +13,20 @@ router.post("/", async (req, res) => {
   if (error) return res.status(400).send(error.details[0].message);
 
   const user = await User.findOne({ email: req.body.email })
-    .populate("userType")
-    .select("_id name password firstName lastName status confirmed");
+    .populate("userType", "_id name")
+    .select("_id name password firstName lastName status confirmed userType");
 
   if (!user) return res.status(400).send("Invalid password or email");
-  if (!user.confirmed && user.userType.name === "customer")
+
+  let userTypeName = null;
+  if (user.userType && typeof user.userType === "object" && user.userType.name) {
+    userTypeName = user.userType.name.toLowerCase();
+  } else if (user.userType) {
+    const userTypeDoc = await UserType.findById(user.userType).select("name");
+    userTypeName = userTypeDoc?.name?.toLowerCase();
+  }
+
+  if (!user.confirmed && userTypeName === "customer")
     return res.status(400).send("Please verify your email.");
   if (user.status === "suspend")
     return res.status(400).send("Account has been suspended");
