@@ -18,7 +18,7 @@ router.get("/", async (req, res) => {
   const users = await User.find()
     .populate("userType", "_id name")
     .select(
-      "_id firstName lastName email isAvailable reservations gender birthDate status createdBy"
+      "_id firstName lastName email isAvailable reservations gender birthDate status createdBy userType",
     );
   res.send(users);
 });
@@ -57,7 +57,7 @@ router.post("/", async (req, res) => {
         "password",
         "userType",
         "status",
-      ])
+      ]),
     );
 
     user.createdBy = {
@@ -170,7 +170,7 @@ router.put("/:id", [auth, admin, validateObjectId], async (req, res) => {
         birthDate: req.body.birthDate,
         status: req.body.status,
       },
-      options
+      options,
     ).populate("userType", "_id name");
 
     if (!user) return res.status(400).send("User not found");
@@ -200,7 +200,7 @@ router.put(
 
     const validPassword = await bcrypt.compare(
       req.body.password,
-      user.password
+      user.password,
     );
     if (!validPassword)
       return res
@@ -221,11 +221,11 @@ router.put(
       {
         password,
       },
-      options
+      options,
     );
     if (!user) return res.status(404).send("User not found");
     res.send(user);
-  }
+  },
 );
 
 router.put(
@@ -260,7 +260,7 @@ router.put(
         {
           status: req.body.status,
         },
-        options
+        options,
       ).populate("userType", "_id name");
 
       if (!user) return res.status(400).send("User not found");
@@ -268,7 +268,7 @@ router.put(
     } catch (error) {
       res.status(500).send("Unexpected error occured");
     }
-  }
+  },
 );
 
 const validateEditUser = (req) => {
@@ -315,7 +315,7 @@ const emailConfirmation = async (user) => {
           (error, token) => {
             if (error) return reject(error);
             resolve(token);
-          }
+          },
         );
       });
 
