@@ -1,6 +1,7 @@
-const mongoose = require("mongoose");
-const Joi = require("joi");
-Joi.objectId = require("joi-objectid")(Joi);
+import mongoose from "mongoose";
+import Joi from "joi";
+import JoiObjectId from "joi-objectid";
+Joi.objectId = JoiObjectId(Joi);
 
 const Schema = mongoose.Schema;
 
@@ -66,7 +67,7 @@ const bookingSchema = new Schema(
 );
 
 const validateBookings = (bookings, user) => {
-  const schema = {
+  const schema = Joi.object({
     therapist: Joi.objectId().required(),
     prevTherapist: Joi.objectId(),
     massageType: Joi.string().required(),
@@ -84,12 +85,11 @@ const validateBookings = (bookings, user) => {
     city: Joi.string().min(3).max(255).required(),
     zip: Joi.string().min(6).max(255).required(),
     date: Joi.date().required(),
-  };
+  });
 
-  return Joi.validate(bookings, schema);
+  return schema.validate(bookings);
 };
 
 const Booking = mongoose.model("Booking", bookingSchema);
 
-exports.Booking = Booking;
-exports.validate = validateBookings;
+export { Booking, validateBookings as validate };

@@ -1,5 +1,5 @@
-const mongoose = require("mongoose");
-const { User } = require("./user.model");
+import mongoose from "mongoose";
+import { User } from "./user.model.js";
 
 const Schema = mongoose.Schema;
 
@@ -29,4 +29,4 @@ const therapistSchema = new Schema(
 
 const Therapist = User.discriminator("therapist", therapistSchema);
 
-exports.Therapist = Therapist;
+export { Therapist };

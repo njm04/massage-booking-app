@@ -1,5 +1,5 @@
-const mongoose = require("mongoose");
-const Joi = require("joi");
+import mongoose from "mongoose";
+import Joi from "joi";
 
 const Schema = mongoose.Schema;
 
@@ -19,12 +19,11 @@ const userTypeSchema = new Schema(
 const UserType = mongoose.model("UserType", userTypeSchema);
 
 const validateUserTypes = (type) => {
-  const schema = {
+  const schema = Joi.object({
     name: Joi.string().min(4).max(50).required(),
-  };
+  });
 
-  return Joi.validate(type, schema);
+  return schema.validate(type);
 };
 
-exports.UserType = UserType;
-exports.validate = validateUserTypes;
+export { UserType, validateUserTypes as validate };

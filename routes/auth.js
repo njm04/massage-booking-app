@@ -1,10 +1,11 @@
-const express = require("express");
-const Joi = require("joi");
-const bcrypt = require("bcryptjs");
-const config = require("config");
-const jwt = require("jsonwebtoken");
-const { User } = require("../models/user.model");
-const { Customer } = require("../models/customer.model");
+import express from "express";
+import Joi from "joi";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { getConfigValue } from "../startup/env.js";
+import { User } from "../models/user.model.js";
+import { Customer } from "../models/customer.model.js";
+import { UserType } from "../models/userType.model.js";
 const router = express.Router();
 
 router.post("/", async (req, res) => {
@@ -12,11 +13,20 @@ router.post("/", async (req, res) => {
   if (error) return res.status(400).send(error.details[0].message);
 
   const user = await User.findOne({ email: req.body.email })
-    .populate("userType")
-    .select("_id name password firstName lastName status confirmed");
+    .populate("userType", "_id name")
+    .select("_id name password firstName lastName status confirmed userType");
 
   if (!user) return res.status(400).send("Invalid password or email");
-  if (!user.confirmed && user.userType.name === "customer")
+
+  let userTypeName = null;
+  if (user.userType && typeof user.userType === "object" && user.userType.name) {
+    userTypeName = user.userType.name.toLowerCase();
+  } else if (user.userType) {
+    const userTypeDoc = await UserType.findById(user.userType).select("name");
+    userTypeName = userTypeDoc?.name?.toLowerCase();
+  }
+
+  if (!user.confirmed && userTypeName === "customer")
     return res.status(400).send("Please verify your email.");
   if (user.status === "suspend")
     return res.status(400).send("Account has been suspended");
@@ -32,7 +42,7 @@ router.get("/confirmation/:token", async (req, res) => {
   try {
     const {
       user: { _id },
-    } = jwt.verify(req.params.token, config.get("EMAIL_SECRET"));
+    } = jwt.verify(req.params.token, getConfigValue("EMAIL_SECRET", "booking_emailSecret"));
 
     const user = await Customer.findById(_id);
     if (user.confirmed) {
@@ -42,7 +52,7 @@ router.get("/confirmation/:token", async (req, res) => {
         { _id: user._id },
         { confirmed: true, status: "active" }
       );
-      res.redirect(config.get("CONFIRMED_URI"));
+      res.redirect(getConfigValue("CONFIRMED_URI", "booking_CONFIRMED_URI"));
     }
   } catch (error) {
     res.status(500).send("Unexpected error occured");
@@ -50,12 +60,12 @@ router.get("/confirmation/:token", async (req, res) => {
 });
 
 const validate = (req) => {
-  const schema = {
+  const schema = Joi.object({
     email: Joi.string().min(5).max(255).email().required(),
     password: Joi.string().min(4).max(1000).required(),
-  };
+  });
 
-  return Joi.validate(req, schema);
+  return schema.validate(req);
 };
 
-module.exports = router;
+export default router;

@@ -1,7 +1,7 @@
-const winston = require("winston");
-require("express-async-errors");
+import winston from "winston";
+import "express-async-errors";
 
-module.exports = () => {
+export default () => {
   const logger = winston.createLogger({
     level: "info",
     format: winston.format.json(),

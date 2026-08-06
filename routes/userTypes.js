@@ -1,6 +1,6 @@
-const express = require("express");
-const { UserType, validate } = require("../models/userType.model");
-const auth = require("../middleware/auth");
+import express from "express";
+import { UserType, validate } from "../models/userType.model.js";
+import auth from "../middleware/auth.js";
 const router = express.Router();
 
 router.get("/", auth, async (req, res) => {
@@ -25,4 +25,4 @@ router.post("/", auth, async (req, res) => {
   res.send(type);
 });
 
-module.exports = router;
+export default router;

@@ -1,0 +1,606 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Massage Booking API",
+    "version": "1.0.0",
+    "description": "API documentation for the massage booking application"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000",
+      "description": "Local development server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "xAuthToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-auth-token"
+      }
+    }
+  },
+  "security": [
+    {
+      "xAuthToken": []
+    }
+  ],
+  "paths": {
+    "/api/users": {
+      "get": {
+        "summary": "Get all users",
+        "tags": ["Users"],
+        "responses": {
+          "200": {
+            "description": "A list of users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Register a customer",
+        "description": "Public registration endpoint for customers. The backend assigns the user type and status automatically.",
+        "tags": ["Users"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "firstName",
+                  "lastName",
+                  "email",
+                  "birthDate",
+                  "gender",
+                  "password"
+                ],
+                "properties": {
+                  "firstName": { "type": "string" },
+                  "lastName": { "type": "string" },
+                  "email": { "type": "string", "format": "email" },
+                  "birthDate": { "type": "string", "format": "date" },
+                  "gender": { "type": "string" },
+                  "password": { "type": "string" }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User created successfully"
+          },
+          "400": {
+            "description": "Validation error or duplicate user"
+          }
+        }
+      }
+    },
+    "/api/users/me": {
+      "get": {
+        "summary": "Get the current authenticated user",
+        "tags": ["Users"],
+        "security": [
+          {
+            "xAuthToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authenticated user profile"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/users/create-user": {
+      "post": {
+        "summary": "Create a user as an admin",
+        "description": "Admin-only endpoint for creating a user. The backend assigns the createdBy metadata and handles status defaults.",
+        "tags": ["Users"],
+        "security": [
+          {
+            "xAuthToken": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "firstName",
+                  "lastName",
+                  "email",
+                  "birthDate",
+                  "gender",
+                  "password",
+                  "userType"
+                ],
+                "properties": {
+                  "firstName": { "type": "string" },
+                  "lastName": { "type": "string" },
+                  "email": { "type": "string", "format": "email" },
+                  "birthDate": { "type": "string", "format": "date" },
+                  "gender": { "type": "string" },
+                  "password": { "type": "string" },
+                  "userType": { "type": "string" }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User created successfully by admin"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/api/users/{id}": {
+      "put": {
+        "summary": "Update a user by id",
+        "tags": ["Users"],
+        "security": [
+          {
+            "xAuthToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "firstName",
+                  "lastName",
+                  "birthDate",
+                  "gender",
+                  "status"
+                ],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "firstName": { "type": "string" },
+                  "lastName": { "type": "string" },
+                  "birthDate": { "type": "string", "format": "date" },
+                  "gender": { "type": "string" },
+                  "status": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User updated successfully"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a user by id",
+        "tags": ["Users"],
+        "security": [
+          {
+            "xAuthToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User deleted successfully"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      }
+    },
+    "/api/users/change-password/{id}": {
+      "put": {
+        "summary": "Change a user's password",
+        "tags": ["Users"],
+        "security": [
+          {
+            "xAuthToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "password",
+                  "newPassword",
+                  "newPasswordConfirmation"
+                ],
+                "properties": {
+                  "password": { "type": "string" },
+                  "newPassword": { "type": "string" },
+                  "newPasswordConfirmation": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password changed successfully"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      }
+    },
+    "/api/users/update-status/{id}": {
+      "put": {
+        "summary": "Update a user's status",
+        "tags": ["Users"],
+        "security": [
+          {
+            "xAuthToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["status"],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": ["active", "suspend"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Status updated successfully"
+          },
+          "400": {
+            "description": "Validation error"
+          }
+        }
+      }
+    },
+    "/api/bookings": {
+      "get": {
+        "summary": "Get bookings for the current user",
+        "tags": ["Bookings"],
+        "security": [
+          {
+            "xAuthToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of bookings"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a booking",
+        "tags": ["Bookings"],
+        "security": [
+          {
+            "xAuthToken": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "therapist",
+                  "massageType",
+                  "duration",
+                  "contactNumber",
+                  "address",
+                  "state",
+                  "city",
+                  "zip",
+                  "date"
+                ],
+                "properties": {
+                  "therapist": { "type": "string" },
+                  "massageType": { "type": "string" },
+                  "duration": { "type": "number" },
+                  "contactNumber": { "type": "string" },
+                  "address": { "type": "string" },
+                  "addressTwo": { "type": "string" },
+                  "state": { "type": "string" },
+                  "city": { "type": "string" },
+                  "zip": { "type": "string" },
+                  "date": { "type": "string", "format": "date-time" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Booking created successfully"
+          }
+        }
+      }
+    },
+    "/api/bookings/{id}": {
+      "put": {
+        "summary": "Update a booking",
+        "tags": ["Bookings"],
+        "security": [
+          {
+            "xAuthToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Booking updated successfully"
+          }
+        }
+      }
+    },
+    "/api/bookings/delete/{id}": {
+      "put": {
+        "summary": "Delete or cancel a booking",
+        "tags": ["Bookings"],
+        "security": [
+          {
+            "xAuthToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Booking deletion status updated"
+          }
+        }
+      }
+    },
+    "/api/bookings/update-view/{id}": {
+      "get": {
+        "summary": "Get a booking for update view",
+        "tags": ["Bookings"],
+        "security": [
+          {
+            "xAuthToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Booking retrieved"
+          }
+        }
+      }
+    },
+    "/api/bookings/update-status/{id}": {
+      "put": {
+        "summary": "Update booking status",
+        "tags": ["Bookings"],
+        "security": [
+          {
+            "xAuthToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Booking status updated"
+          }
+        }
+      }
+    },
+    "/api/auth": {
+      "post": {
+        "summary": "Authenticate a user",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authentication successful"
+          },
+          "400": {
+            "description": "Invalid credentials"
+          }
+        }
+      }
+    },
+    "/api/auth/confirmation/{token}": {
+      "get": {
+        "summary": "Confirm a user email",
+        "tags": ["Auth"],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Email confirmation response"
+          }
+        }
+      }
+    },
+    "/api/user-types": {
+      "get": {
+        "summary": "Get all user types",
+        "tags": ["User Types"],
+        "security": [
+          {
+            "xAuthToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of user types"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a user type",
+        "tags": ["User Types"],
+        "security": [
+          {
+            "xAuthToken": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User type created"
+          }
+        }
+      }
+    }
+  }
+}

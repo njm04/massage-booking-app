@@ -1,9 +1,10 @@
-const mongoose = require("mongoose");
-const Joi = require("joi");
-const jwt = require("jsonwebtoken");
-const config = require("config");
-Joi.objectId = require("joi-objectid")(Joi);
-const moment = require("moment");
+import mongoose from "mongoose";
+import Joi from "joi";
+import jwt from "jsonwebtoken";
+import JoiObjectId from "joi-objectid";
+import { getConfigValue } from "../startup/env.js";
+import dayjs from "dayjs";
+Joi.objectId = JoiObjectId(Joi);
 
 const Schema = mongoose.Schema;
 
@@ -19,11 +20,7 @@ const userSchema = new Schema(
       type: new Schema({
         firstName: { type: String, required: true },
         lastName: { type: String, required: true },
-        userType: {
-          type: new Schema({
-            name: { type: String, required: true },
-          }),
-        },
+        userType: { type: String, required: true },
       }),
       required: true,
     },
@@ -44,7 +41,7 @@ const userSchema = new Schema(
 );
 
 userSchema.pre("save", function (next) {
-  this.age = moment().diff(this.birthDate, "years");
+  this.age = dayjs().diff(this.birthDate, "years");
   next();
 });
 
@@ -57,7 +54,7 @@ userSchema.methods.generateAuthToken = function () {
     userType: this.userType,
   };
 
-  return jwt.sign(payload, config.get("jwtPrivateKey"));
+  return jwt.sign(payload, getConfigValue("jwtPrivateKey", "booking_jwtPrivateKey"));
 };
 
 userSchema.statics.findUserByIdAndPopulate = function (id) {
@@ -71,7 +68,7 @@ userSchema.statics.findUserByIdAndPopulate = function (id) {
 const User = mongoose.model("User", userSchema);
 
 const validateUsers = (user) => {
-  const schema = {
+  const schema = Joi.object({
     email: Joi.string().min(5).max(255).email().required(),
     firstName: Joi.string().required(),
     lastName: Joi.string().required(),
@@ -81,10 +78,9 @@ const validateUsers = (user) => {
     userType: Joi.objectId().required(),
     status: Joi.string().required(),
     isDeleted: Joi.boolean(),
-  };
+  });
 
-  return Joi.validate(user, schema);
+  return schema.validate(user);
 };
 
-exports.User = User;
-exports.validate = validateUsers;
+export { User, validateUsers as validate };
