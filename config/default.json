@@ -4,6 +4,6 @@
   "email": "",
   "password": "",
   "EMAIL_SECRET": "",
-  "URI": "http://localhost:5001/api",
-  "CONFIRMED_URI": "http://localhost:3000/confirmed"
+  "URI": "http://localhost:5000/api",
+  "CONFIRMED_URI": "http://localhost:5173/email-confirmed"
 }

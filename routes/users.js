@@ -24,7 +24,9 @@ router.get("/", async (req, res) => {
 });
 
 router.get("/me", auth, async (req, res) => {
-  const user = await User.findById(req.user._id).select("-password");
+  const user = await User.findById(req.user._id)
+    .populate("userType", "_id name")
+    .select("-password -createdBy -createdAt -updatedAt -confirmed -__t -__v");
   res.send(user);
 });
 

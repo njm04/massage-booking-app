@@ -47,7 +47,7 @@ const bookingSchema = new Schema(
     massageType: { type: String, required: true },
     duration: { type: Number, required: true },
     contactNumber: { type: String, required: true },
-    address: { type: String, require: true },
+    address: { type: String, required: true },
     addressTwo: { type: String, default: "" },
     state: { type: String, required: true },
     city: { type: String, required: true },
@@ -63,7 +63,7 @@ const bookingSchema = new Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 const validateBookings = (bookings, user) => {

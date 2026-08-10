@@ -30,7 +30,7 @@ router.post("/", auth, async (req, res) => {
   if (!user) return res.status(400).send("Invalid user.");
 
   const { therapist: therapistId } = req.body;
-  const therapist = await User.findById(therapistId);
+  const therapist = await Therapist.findById(therapistId);
   if (!therapist) return res.status(400).send("Therapist not found.");
 
   const userType = await UserType.findById(userTypeId);
@@ -79,13 +79,13 @@ router.post("/", auth, async (req, res) => {
 
     await booking.save({ session });
 
-    await User.updateOne(
+    await Therapist.updateOne(
       { _id: therapist._id },
       {
         isAvailable: false,
         $push: { reservations: reservation },
       },
-      { session }
+      { session },
     );
 
     await session.commitTransaction();
@@ -214,7 +214,7 @@ router.put("/:id", [auth, validateObjectId], async (req, res) => {
   const booking = await Booking.findByIdAndUpdate(
     req.params.id,
     payload,
-    options
+    options,
   );
 
   if (!booking) return res.status(400).send("Booking not found");
@@ -231,13 +231,13 @@ router.put("/delete/:id", [auth, validateObjectId], async (req, res) => {
       booking = await Booking.findByIdAndUpdate(
         req.params.id,
         { status: "cancelled" },
-        options
+        options,
       );
     } else {
       booking = await Booking.findByIdAndUpdate(
         req.params.id,
         { isDeleted: true },
-        options
+        options,
       );
     }
 
@@ -245,7 +245,7 @@ router.put("/delete/:id", [auth, validateObjectId], async (req, res) => {
 
     await Therapist.updateOne(
       { _id: booking.therapist._id },
-      { $pull: { reservations: { _id: booking._id } } }
+      { $pull: { reservations: { _id: booking._id } } },
     );
 
     res.send(booking);
@@ -277,7 +277,7 @@ router.put(
         booking = await Booking.findByIdAndUpdate(
           req.params.id,
           { status: req.body.status },
-          options
+          options,
         );
         if (!booking) return res.status(400).send("Appointment not found");
         res.send(booking);
@@ -289,12 +289,12 @@ router.put(
           await Booking.updateOne(
             { _id: booking._id },
             { status: req.body.status },
-            { session }
+            { session },
           );
           await User.updateOne(
             { _id: booking.therapist._id },
             { $pull: { reservations: { _id: booking._id } } },
-            { session }
+            { session },
           );
           await session.commitTransaction();
         } catch (error) {
@@ -310,7 +310,7 @@ router.put(
     } catch (error) {
       res.status(500).send("Unexpected error occured");
     }
-  }
+  },
 );
 
 const validateStatus = (req) => {
@@ -331,7 +331,7 @@ const emailMessage = (booking) => {
 
   <h2 style="${style}">Appointment details:</h2> 
   <p><strong>When: </strong>${dayjs(booking.date).format(
-    "MMMM D YYYY, h:mm A"
+    "MMMM D YYYY, h:mm A",
   )}</p> 
   <p><strong>Massage type: </strong>${booking.massageType}</p> 
   <p><strong>Duration: </strong>${booking.duration} minutes</p> 

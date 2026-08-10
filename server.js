@@ -1,4 +1,4 @@
-// import("./startup/cronJob.js");
+import startCronJob from "./startup/cronJob.js";
 import express from "express";
 import winston from "winston";
 import "./startup/env.js";
@@ -14,10 +14,11 @@ config();
 routes(app);
 void db();
 prod(app);
+startCronJob();
 
 const startServer = (port, attempt = 1) => {
   const server = app.listen(port, () =>
-    winston.info(`Server is running on port: ${port}`)
+    winston.info(`Server is running on port: ${port}`),
   );
 
   server.on("error", (error) => {
