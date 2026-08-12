@@ -1,3 +1,4 @@
+import type { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import Joi from "joi";
 import _ from "lodash";
@@ -10,7 +11,15 @@ import { UserType } from "../models/userType.model.js";
 import { Booking } from "../models/booking.model.js";
 import transporter from "../startup/transporter.js";
 
-const validateEditUser = (req) => {
+type AuthRequest = Request & {
+  user?: {
+    _id?: string;
+    userType?: { name?: string };
+    [key: string]: any;
+  };
+};
+
+const validateEditUser = (req: Record<string, any>) => {
   const schema = Joi.object({
     email: Joi.string().min(5).max(255).email().required(),
     firstName: Joi.string().required(),
@@ -23,7 +32,7 @@ const validateEditUser = (req) => {
   return schema.validate(req);
 };
 
-const validatePassword = (req) => {
+const validatePassword = (req: Record<string, any>) => {
   const schema = Joi.object({
     password: Joi.string().min(5).max(1000).required(),
     newPassword: Joi.string().min(5).max(1000).required(),
@@ -33,7 +42,7 @@ const validatePassword = (req) => {
   return schema.validate(req);
 };
 
-const validateStatus = (req) => {
+const validateStatus = (req: Record<string, any>) => {
   const schema = Joi.object({
     status: Joi.string().valid("active", "suspend").required(),
   });
@@ -41,7 +50,7 @@ const validateStatus = (req) => {
   return schema.validate(req);
 };
 
-const emailMessage = (user, url) => {
+const emailMessage = (user: Record<string, any>, url: string) => {
   const style = "margin-bottom: 20px";
   return `
   <p style="${style}">Hi ${user.firstName} ${user.lastName}!</p>
@@ -51,24 +60,28 @@ const emailMessage = (user, url) => {
   `;
 };
 
-const emailConfirmation = async (user) => {
+const emailConfirmation = async (user: any) => {
   const userKind = user.kind || user.__t || user.constructor.modelName;
 
   if (userKind === "customer") {
     try {
+      const emailSecret = getConfigValue("EMAIL_SECRET", "booking_emailSecret");
+      if (!emailSecret) return;
+
       const emailToken = await new Promise((resolve, reject) => {
         jwt.sign(
           { user: _.pick(user, "_id") },
-          getConfigValue("EMAIL_SECRET", "booking_emailSecret"),
+          emailSecret,
           { expiresIn: "1d" },
-          (error, token) => {
+          (error: Error | null, token?: string) => {
             if (error) return reject(error);
             resolve(token);
           },
         );
       });
 
-      const url = `${getConfigValue("URI", "booking_URI")}/auth/confirmation/${emailToken}`;
+      const confirmationUri = getConfigValue("URI", "booking_URI");
+      const url = `${confirmationUri ?? ""}/auth/confirmation/${emailToken}`;
       await transporter.sendMail({
         to: user.email,
         subject: "Verify your email address",
@@ -82,7 +95,7 @@ const emailConfirmation = async (user) => {
   }
 };
 
-export const getUsers = async (req, res) => {
+export const getUsers = async (_req: AuthRequest, res: Response) => {
   const users = await User.find()
     .populate("userType", "_id name")
     .select(
@@ -91,14 +104,14 @@ export const getUsers = async (req, res) => {
   res.send(users);
 };
 
-export const getCurrentUser = async (req, res) => {
-  const user = await User.findById(req.user._id)
+export const getCurrentUser = async (req: AuthRequest, res: Response) => {
+  const user = await User.findById(req.user?._id)
     .populate("userType", "_id name")
     .select("-password -createdBy -createdAt -updatedAt -confirmed -__t -__v");
   res.send(user);
 };
 
-export const registerCustomer = async (req, res) => {
+export const registerCustomer = async (req: AuthRequest, res: Response) => {
   try {
     let userType = req.body.userType
       ? await UserType.findById(req.body.userType)
@@ -143,8 +156,8 @@ export const registerCustomer = async (req, res) => {
     } catch (emailError) {
       console.warn("Email confirmation skipped", emailError);
     }
-    const token = user.generateAuthToken();
-    user = await User.findUserByIdAndPopulate(user._id);
+    const token = (user as any).generateAuthToken();
+    user = await (User as any).findUserByIdAndPopulate(user._id);
     res.header("x-auth-token", token).send(user);
   } catch (error) {
     console.error(error);
@@ -152,13 +165,13 @@ export const registerCustomer = async (req, res) => {
   }
 };
 
-export const createUser = async (req, res) => {
-  const { _id: userId } = req.user;
+export const createUser = async (req: AuthRequest, res: Response) => {
+  const { _id: userId } = req.user ?? {};
 
   const { error } = validate(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
-  let userInfo = await User.findUserByIdAndPopulate(userId);
+  let userInfo = await (User as any).findUserByIdAndPopulate(userId);
   if (!userInfo) return res.status(400).send("Invalid user.");
 
   let user = await User.findOne({ email: req.body.email });
@@ -195,7 +208,7 @@ export const createUser = async (req, res) => {
 
     user.password = await bcrypt.hash(user.password, 10);
     await user.save();
-    user = await User.findUserByIdAndPopulate(user._id);
+    user = await (User as any).findUserByIdAndPopulate(user._id);
     try {
       await emailConfirmation(user);
     } catch (emailError) {
@@ -207,7 +220,7 @@ export const createUser = async (req, res) => {
   }
 };
 
-export const updateUser = async (req, res) => {
+export const updateUser = async (req: AuthRequest, res: Response) => {
   const options = {
     new: true,
     select: "_id firstName lastName email gender birthDate status",
@@ -218,9 +231,10 @@ export const updateUser = async (req, res) => {
   const user = await User.findById(req.params.id);
   if (!user) return res.status(400).send("User not found");
 
+  const typedUser = user as any;
   if (
-    (user.kind || user.__t) === "therapist" &&
-    user.reservations.length > 0 &&
+    (typedUser.kind || typedUser.__t) === "therapist" &&
+    (typedUser.reservations?.length ?? 0) > 0 &&
     req.body.status === "suspend"
   ) {
     const name = user.firstName + " " + user.lastName;
@@ -250,7 +264,7 @@ export const updateUser = async (req, res) => {
   }
 };
 
-export const deleteUser = async (req, res) => {
+export const deleteUser = async (req: Request, res: Response) => {
   const user = await User.findById(req.params.id);
   if (!user) return res.status(404).send("User not found");
 
@@ -258,17 +272,14 @@ export const deleteUser = async (req, res) => {
   res.send(user);
 };
 
-export const changePassword = async (req, res) => {
+export const changePassword = async (req: Request, res: Response) => {
   const { error } = validatePassword(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
   let user = await User.findById(req.params.id);
   if (!user) return res.status(404).send("User not found");
 
-  const validPassword = await bcrypt.compare(
-    req.body.password,
-    user.password,
-  );
+  const validPassword = await bcrypt.compare(req.body.password, user.password);
   if (!validPassword)
     return res
       .status(400)
@@ -294,7 +305,7 @@ export const changePassword = async (req, res) => {
   res.send(user);
 };
 
-export const updateUserStatus = async (req, res) => {
+export const updateUserStatus = async (req: Request, res: Response) => {
   const options = {
     new: true,
     select: "_id firstName lastName email gender birthDate status",
@@ -306,9 +317,10 @@ export const updateUserStatus = async (req, res) => {
   const user = await User.findById(req.params.id);
   if (!user) return res.status(400).send("User not found");
 
+  const typedUser = user as any;
   if (
-    (user.kind || user.__t) === "therapist" &&
-    user.reservations.length > 0 &&
+    (typedUser.kind || typedUser.__t) === "therapist" &&
+    (typedUser.reservations?.length ?? 0) > 0 &&
     req.body.status === "suspend"
   ) {
     const name = user.firstName + " " + user.lastName;
@@ -316,7 +328,7 @@ export const updateUserStatus = async (req, res) => {
       .status(400)
       .send(`Cant suspend ${name}'s account due to existing reservations.`);
   } else if (
-    (user.kind || user.__t) === "customer" &&
+    (typedUser.kind || typedUser.__t) === "customer" &&
     req.body.status === "suspend"
   ) {
     const bookings = await Booking.find({

@@ -2,7 +2,7 @@ import winston from "winston";
 import { getConfigValue } from "./env.js";
 
 export default () => {
-  const required = [
+  const required: Array<[string, string]> = [
     ["jwtPrivateKey", "booking_jwtPrivateKey"],
     ["ATLAS_DB", "booking_ATLAS_DB"],
     ["email", "booking_email"],
@@ -13,7 +13,9 @@ export default () => {
   for (const [key, envKey] of required) {
     const value = getConfigValue(key, envKey);
     if (!value) {
-      winston.warn(`Configuration value '${envKey}' is not set; continuing without it.`);
+      winston.warn(
+        `Configuration value '${envKey}' is not set; continuing without it.`,
+      );
     }
   }
 };

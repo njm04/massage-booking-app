@@ -1,43 +1,30 @@
 import mongoose from "mongoose";
 import Joi from "joi";
 import JoiObjectId from "joi-objectid";
-Joi.objectId = JoiObjectId(Joi);
 
-const Schema = mongoose.Schema;
+(Joi as any).objectId = JoiObjectId(Joi);
 
-const bookingSchema = new Schema(
+const bookingSchema = new mongoose.Schema(
   {
-    // user: {
-    //   type: new Schema({
-    //     firstName: { type: String, required: true },
-    //     lastName: { type: String, required: true },
-    //     email: { type: String, required: true },
-    //     userType: {
-    //       type: new Schema({
-    //         name: { type: String, required: true },
-    //       }),
-    //     },
-    //   }),
-    // },
     createdBy: {
-      type: new Schema({
+      type: new mongoose.Schema({
         firstName: { type: String, required: true },
         lastName: { type: String, required: true },
         userType: {
-          type: new Schema({
+          type: new mongoose.Schema({
             name: { type: String, required: true },
           }),
         },
       }),
     },
     therapist: {
-      type: new Schema({
+      type: new mongoose.Schema({
         firstName: { type: String, required: true },
         lastName: { type: String, required: true },
       }),
     },
     customer: {
-      type: new Schema({
+      type: new mongoose.Schema({
         firstName: { type: String, required: true },
         lastName: { type: String, required: true },
         email: { type: String, required: true },
@@ -66,10 +53,10 @@ const bookingSchema = new Schema(
   },
 );
 
-const validateBookings = (bookings, user) => {
+const validateBookings = (bookings: Record<string, any>, user: any) => {
   const schema = Joi.object({
-    therapist: Joi.objectId().required(),
-    prevTherapist: Joi.objectId(),
+    therapist: (Joi as any).objectId().required(),
+    prevTherapist: (Joi as any).objectId(),
     massageType: Joi.string().required(),
     duration: Joi.number().min(60).max(120).required(),
     contactNumber: Joi.string().min(10).max(20).required(),
@@ -78,7 +65,7 @@ const validateBookings = (bookings, user) => {
     firstName: Joi.string().max(255).required(),
     lastName: Joi.string().max(255).required(),
     email:
-      user.userType.name === "admin"
+      user?.userType?.name === "admin"
         ? Joi.string().min(5).max(255).email().required()
         : Joi.string().min(5).max(255).email(),
     addressTwo: Joi.string().max(10).optional().allow(""),

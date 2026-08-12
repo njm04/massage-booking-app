@@ -7,12 +7,14 @@ const getDbUri = () => getConfigValue("ATLAS_DB", "booking_ATLAS_DB");
 export default async () => {
   const db = getDbUri();
   if (!db) {
-    winston.warn("MongoDB connection string is not configured; skipping database connection.");
+    winston.warn(
+      "MongoDB connection string is not configured; skipping database connection.",
+    );
     return;
   }
 
   try {
-    await mongoose.connect(db);
+    await mongoose.connect(db as string);
     winston.info("Connected to MongoDB...");
   } catch (error) {
     winston.error("MongoDB connection failed", error);

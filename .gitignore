@@ -1,4 +1,5 @@
 node_modules/
 tmpnodejsnpm-cache/
+dist
 
 *.log

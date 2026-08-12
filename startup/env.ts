@@ -3,7 +3,10 @@ import config from "config";
 
 dotenv.config();
 
-export const getConfigValue = (configKey, envKey) => {
+export const getConfigValue = (
+  configKey: string,
+  envKey?: string,
+): string | undefined => {
   const directEnv = envKey ? process.env[envKey] : undefined;
   if (directEnv) return directEnv;
 
@@ -11,7 +14,10 @@ export const getConfigValue = (configKey, envKey) => {
   if (fallbackEnv) return fallbackEnv;
 
   try {
-    return config.get(configKey);
+    const value = config.get(configKey);
+    if (typeof value === "string") return value;
+    if (value != null) return String(value);
+    return undefined;
   } catch {
     return undefined;
   }

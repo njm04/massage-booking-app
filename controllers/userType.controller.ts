@@ -1,14 +1,15 @@
+import type { Request, Response } from "express";
 import Joi from "joi";
 import { UserType, validate } from "../models/userType.model.js";
 
-const validateUserType = (req) => validate(req);
+const validateUserType = (req: Record<string, any>) => validate(req);
 
-export const getUserTypes = async (req, res) => {
+export const getUserTypes = async (_req: Request, res: Response) => {
   const types = await UserType.find().select("_id name");
   res.send(types);
 };
 
-export const createUserType = async (req, res) => {
+export const createUserType = async (req: Request, res: Response) => {
   const { error } = validateUserType(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 

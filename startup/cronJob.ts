@@ -10,10 +10,10 @@ export default () => {
         isDeleted: 0,
         date: { $lt: Date.now() },
       },
-      { isDeleted: 1 }
+      { isDeleted: 1 },
     );
 
-    console.log(result.nModified);
+    console.log((result as any).modifiedCount ?? (result as any).nModified);
   });
   job.start();
 };

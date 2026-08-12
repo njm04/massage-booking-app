@@ -17,7 +17,7 @@ const corsOptions = {
   exposedHeaders: "x-auth-token",
 };
 
-export default (app) => {
+export default (app: express.Express) => {
   const hbs = create({
     defaultLayout: "main",
   });
@@ -27,7 +27,11 @@ export default (app) => {
   app.set("view engine", "handlebars");
   app.use(express.json());
   app.use(cors(corsOptions));
-  app.use("/api-docs", swaggerUiMiddleware.serve, swaggerUiMiddleware.setup(swaggerDocs));
+  app.use(
+    "/api-docs",
+    swaggerUiMiddleware.serve,
+    swaggerUiMiddleware.setup(swaggerDocs),
+  );
   app.use("/api/users", users);
   app.use("/api/auth", auth);
   app.use("/api/bookings", bookings);

@@ -1,9 +1,7 @@
 import mongoose from "mongoose";
 import Joi from "joi";
 
-const Schema = mongoose.Schema;
-
-const userTypeSchema = new Schema(
+const userTypeSchema = new mongoose.Schema(
   {
     name: {
       type: String,
@@ -13,12 +11,12 @@ const userTypeSchema = new Schema(
       required: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const UserType = mongoose.model("UserType", userTypeSchema);
 
-const validateUserTypes = (type) => {
+const validateUserTypes = (type: Record<string, any>) => {
   const schema = Joi.object({
     name: Joi.string().min(4).max(50).required(),
   });
