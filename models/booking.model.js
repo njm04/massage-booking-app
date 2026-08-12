@@ -38,11 +38,11 @@ const bookingSchema = new Schema(
     },
     customer: {
       type: new Schema({
-        _id: false,
         firstName: { type: String, required: true },
         lastName: { type: String, required: true },
         email: { type: String, required: true },
       }),
+      required: true,
     },
     massageType: { type: String, required: true },
     duration: { type: Number, required: true },

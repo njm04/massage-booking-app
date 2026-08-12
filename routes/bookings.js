@@ -8,6 +8,7 @@ import therapist from "../middleware/therapist.js";
 import validateObjectId from "../middleware/validateObjectId.js";
 import transporter from "../startup/transporter.js";
 import { User } from "../models/user.model.js";
+import { Customer } from "../models/customer.model.js";
 import { UserType } from "../models/userType.model.js";
 import { Therapist } from "../models/therapist.model.js";
 const router = express.Router();
@@ -36,6 +37,13 @@ router.post("/", auth, async (req, res) => {
   const userType = await UserType.findById(userTypeId);
   if (!userType) return res.status(400).send("Invalid user type.");
 
+  // Admins can book on behalf of a different customer than themselves.
+  const customer =
+    userType.name === "admin"
+      ? await Customer.findOne({ email: req.body.email })
+      : await Customer.findById(user._id);
+  if (!customer) return res.status(400).send("Customer not found.");
+
   const booking = new Booking({
     createdBy: {
       _id: user._id,
@@ -50,9 +58,10 @@ router.post("/", auth, async (req, res) => {
       lastName: therapist.lastName,
     },
     customer: {
-      firstName: req.body.firstName,
-      lastName: req.body.lastName,
-      email: req.user.userType.name === "admin" ? req.body.email : user.email,
+      _id: customer._id,
+      firstName: customer.firstName,
+      lastName: customer.lastName,
+      email: customer.email,
     },
     massageType: req.body.massageType,
     duration: req.body.duration,
@@ -72,7 +81,7 @@ router.post("/", auth, async (req, res) => {
     const reservation = {
       _id: booking._id,
       massageType: booking.massageType,
-      name: `${booking.customer.firstName} ${booking.customer.lastName}`,
+      name: `${customer.firstName} ${customer.lastName}`,
       duration: booking.duration,
       date: booking.date,
     };
@@ -119,7 +128,7 @@ router.get("/", [auth], async (req, res) => {
   } else if (userType.name === UserTypesEnum.CUSTOMER) {
     bookings = await Booking.find({
       isDeleted: false,
-      "createdBy._id": userId,
+      "customer._id": userId,
     });
   } else {
     bookings = await Booking.find({
@@ -155,11 +164,6 @@ router.put("/:id", [auth, validateObjectId], async (req, res) => {
         firstName: newTherapist.firstName,
         lastName: newTherapist.lastName,
       },
-      customer: {
-        firstName: req.body.firstName,
-        lastName: req.body.lastName,
-        email: req.body.email,
-      },
       massageType: req.body.massageType,
       duration: req.body.duration,
       date: req.body.date,
@@ -183,11 +187,6 @@ router.put("/:id", [auth, validateObjectId], async (req, res) => {
     await newTherapist.save();
   } else {
     payload = {
-      customer: {
-        firstName: req.body.firstName,
-        lastName: req.body.lastName,
-        email: req.body.email,
-      },
       massageType: req.body.massageType,
       duration: req.body.duration,
       date: req.body.date,

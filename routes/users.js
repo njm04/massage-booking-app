@@ -8,6 +8,7 @@ import { User, validate } from "../models/user.model.js";
 import { Therapist } from "../models/therapist.model.js";
 import { Customer } from "../models/customer.model.js";
 import { UserType } from "../models/userType.model.js";
+import { Booking } from "../models/booking.model.js";
 import auth from "../middleware/auth.js";
 import admin from "../middleware/admin.js";
 import validateObjectId from "../middleware/validateObjectId.js";
@@ -254,6 +255,21 @@ router.put(
       return res
         .status(400)
         .send(`Cant suspend ${name}'s account due to existing reservations.`);
+    } else if (
+      (user.kind || user.__t) === "customer" &&
+      req.body.status === "suspend"
+    ) {
+      const bookings = await Booking.find({
+        "customer._id": user._id,
+        status: { $in: ["pending", "ongoing"] },
+      });
+
+      if (bookings.length > 0) {
+        const name = user.firstName + " " + user.lastName;
+        return res
+          .status(400)
+          .send(`Cant suspend ${name}'s account due to existing bookings.`);
+      }
     }
 
     try {
