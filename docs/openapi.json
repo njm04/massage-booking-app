@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:5000",
+      "url": "http://localhost:5000/api-docs",
       "description": "Local development server"
     }
   ],
@@ -29,10 +29,11 @@
     "/api/users": {
       "get": {
         "summary": "Get all users",
+        "description": "Returns all users from the database without role filtering.",
         "tags": ["Users"],
         "responses": {
           "200": {
-            "description": "A list of users",
+            "description": "List of users",
             "content": {
               "application/json": {
                 "schema": {
@@ -48,7 +49,7 @@
       },
       "post": {
         "summary": "Register a customer",
-        "description": "Public registration endpoint for customers. The backend assigns the user type and status automatically.",
+        "description": "Public customer registration endpoint. The server assigns the default customer user type and unverified status.",
         "tags": ["Users"],
         "requestBody": {
           "required": true,
@@ -62,7 +63,8 @@
                   "email",
                   "birthDate",
                   "gender",
-                  "password"
+                  "password",
+                  "userType"
                 ],
                 "properties": {
                   "firstName": { "type": "string" },
@@ -70,7 +72,11 @@
                   "email": { "type": "string", "format": "email" },
                   "birthDate": { "type": "string", "format": "date" },
                   "gender": { "type": "string" },
-                  "password": { "type": "string" }
+                  "password": { "type": "string", "minLength": 5 },
+                  "userType": {
+                    "type": "string",
+                    "description": "Optional ObjectId of a user type. If omitted, customer is used."
+                  }
                 },
                 "additionalProperties": false
               }
@@ -79,17 +85,21 @@
         },
         "responses": {
           "200": {
-            "description": "User created successfully"
+            "description": "User registered successfully"
           },
           "400": {
             "description": "Validation error or duplicate user"
+          },
+          "500": {
+            "description": "Unexpected server error"
           }
         }
       }
     },
     "/api/users/me": {
       "get": {
-        "summary": "Get the current authenticated user",
+        "summary": "Get the authenticated user",
+        "description": "Returns the currently authenticated user profile without sensitive fields such as password.",
         "tags": ["Users"],
         "security": [
           {
@@ -109,7 +119,7 @@
     "/api/users/create-user": {
       "post": {
         "summary": "Create a user as an admin",
-        "description": "Admin-only endpoint for creating a user. The backend assigns the createdBy metadata and handles status defaults.",
+        "description": "Admin-only endpoint for creating a customer, therapist, or general user. The API sends an email confirmation attempt for created users when applicable.",
         "tags": ["Users"],
         "security": [
           {
@@ -137,8 +147,11 @@
                   "email": { "type": "string", "format": "email" },
                   "birthDate": { "type": "string", "format": "date" },
                   "gender": { "type": "string" },
-                  "password": { "type": "string" },
-                  "userType": { "type": "string" }
+                  "password": { "type": "string", "minLength": 5 },
+                  "userType": {
+                    "type": "string",
+                    "description": "UserType ObjectId"
+                  }
                 },
                 "additionalProperties": false
               }
@@ -147,13 +160,16 @@
         },
         "responses": {
           "200": {
-            "description": "User created successfully by admin"
+            "description": "User created successfully"
           },
           "400": {
-            "description": "Validation error"
+            "description": "Validation error, invalid user type, or duplicate user"
           },
           "403": {
             "description": "Forbidden"
+          },
+          "500": {
+            "description": "Unexpected server error"
           }
         }
       }
@@ -161,6 +177,7 @@
     "/api/users/{id}": {
       "put": {
         "summary": "Update a user by id",
+        "description": "Updates basic profile details for a user. Therapist accounts cannot be suspended while they still have reservations.",
         "tags": ["Users"],
         "security": [
           {
@@ -197,7 +214,10 @@
                   "lastName": { "type": "string" },
                   "birthDate": { "type": "string", "format": "date" },
                   "gender": { "type": "string" },
-                  "status": { "type": "string" }
+                  "status": {
+                    "type": "string",
+                    "enum": ["active", "suspend", "unverified"]
+                  }
                 }
               }
             }
@@ -208,15 +228,16 @@
             "description": "User updated successfully"
           },
           "400": {
-            "description": "Validation error"
+            "description": "Validation error, invalid user, or business-rule validation failure"
           },
-          "404": {
-            "description": "User not found"
+          "500": {
+            "description": "Unexpected server error"
           }
         }
       },
       "delete": {
         "summary": "Delete a user by id",
+        "description": "Permanently removes the user record from the database.",
         "tags": ["Users"],
         "security": [
           {
@@ -287,7 +308,7 @@
             "description": "Password changed successfully"
           },
           "400": {
-            "description": "Validation error"
+            "description": "Validation error or mismatched password confirmation"
           },
           "404": {
             "description": "User not found"
@@ -298,6 +319,7 @@
     "/api/users/update-status/{id}": {
       "put": {
         "summary": "Update a user's status",
+        "description": "Admin-only status update. If a therapist is suspended, active reservations block the request; if a customer is suspended, active bookings block the request.",
         "tags": ["Users"],
         "security": [
           {
@@ -336,7 +358,10 @@
             "description": "Status updated successfully"
           },
           "400": {
-            "description": "Validation error"
+            "description": "Validation error or business-rule block"
+          },
+          "500": {
+            "description": "Unexpected server error"
           }
         }
       }
@@ -344,6 +369,7 @@
     "/api/bookings": {
       "get": {
         "summary": "Get bookings for the current user",
+        "description": "Returns bookings filtered by the authenticated user's role: admin gets all active bookings, customer gets their own bookings, and therapist gets bookings assigned to them.",
         "tags": ["Bookings"],
         "security": [
           {
@@ -352,12 +378,16 @@
         ],
         "responses": {
           "200": {
-            "description": "A list of bookings"
+            "description": "List of bookings"
+          },
+          "400": {
+            "description": "Invalid user type"
           }
         }
       },
       "post": {
         "summary": "Create a booking",
+        "description": "Creates a new booking and marks the therapist unavailable while reserving the slot.",
         "tags": ["Bookings"],
         "security": [
           {
@@ -382,7 +412,98 @@
                   "date"
                 ],
                 "properties": {
+                  "therapist": {
+                    "type": "string",
+                    "description": "Therapist ObjectId"
+                  },
+                  "prevTherapist": {
+                    "type": "string",
+                    "description": "Previous therapist when reassigning a booking"
+                  },
+                  "massageType": { "type": "string" },
+                  "duration": {
+                    "type": "number",
+                    "minimum": 60,
+                    "maximum": 120
+                  },
+                  "contactNumber": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 20
+                  },
+                  "address": { "type": "string", "minLength": 3 },
+                  "addressTwo": {
+                    "type": "string",
+                    "maxLength": 10,
+                    "nullable": true
+                  },
+                  "state": { "type": "string" },
+                  "city": { "type": "string", "minLength": 3 },
+                  "zip": { "type": "string", "minLength": 6 },
+                  "date": { "type": "string", "format": "date-time" },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "Required when admin books for a different customer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Booking created successfully"
+          },
+          "400": {
+            "description": "Validation error, invalid therapist, invalid user type, or customer not found"
+          },
+          "500": {
+            "description": "Unexpected server error"
+          }
+        }
+      }
+    },
+    "/api/bookings/{id}": {
+      "put": {
+        "summary": "Update a booking",
+        "description": "Updates a booking's details. When a previous therapist is provided, the booking is reassigned to a new therapist and reservations are adjusted.",
+        "tags": ["Bookings"],
+        "security": [
+          {
+            "xAuthToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "therapist",
+                  "massageType",
+                  "duration",
+                  "contactNumber",
+                  "address",
+                  "state",
+                  "city",
+                  "zip",
+                  "date"
+                ],
+                "properties": {
                   "therapist": { "type": "string" },
+                  "prevTherapist": { "type": "string" },
                   "massageType": { "type": "string" },
                   "duration": { "type": "number" },
                   "contactNumber": { "type": "string" },
@@ -399,33 +520,10 @@
         },
         "responses": {
           "200": {
-            "description": "Booking created successfully"
-          }
-        }
-      }
-    },
-    "/api/bookings/{id}": {
-      "put": {
-        "summary": "Update a booking",
-        "tags": ["Bookings"],
-        "security": [
-          {
-            "xAuthToken": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
             "description": "Booking updated successfully"
+          },
+          "400": {
+            "description": "Validation error, booking not found, or therapist not found"
           }
         }
       }
@@ -433,6 +531,7 @@
     "/api/bookings/delete/{id}": {
       "put": {
         "summary": "Delete or cancel a booking",
+        "description": "Customers cancel the booking by setting status to cancelled, while staff/admin delete it by setting isDeleted = true and removing therapist reservation metadata.",
         "tags": ["Bookings"],
         "security": [
           {
@@ -451,14 +550,21 @@
         ],
         "responses": {
           "200": {
-            "description": "Booking deletion status updated"
+            "description": "Booking deletion or cancellation applied"
+          },
+          "400": {
+            "description": "Booking not found"
+          },
+          "500": {
+            "description": "Unexpected server error"
           }
         }
       }
     },
     "/api/bookings/update-view/{id}": {
       "get": {
-        "summary": "Get a booking for update view",
+        "summary": "Get a booking for edit view",
+        "description": "Retrieves a booking that is still active and not soft-deleted for an update form.",
         "tags": ["Bookings"],
         "security": [
           {
@@ -478,6 +584,9 @@
         "responses": {
           "200": {
             "description": "Booking retrieved"
+          },
+          "400": {
+            "description": "Booking not found"
           }
         }
       }
@@ -485,6 +594,7 @@
     "/api/bookings/update-status/{id}": {
       "put": {
         "summary": "Update booking status",
+        "description": "Therapist-only route for moving a booking between status values. Completed bookings also remove the reservation from the therapist profile and commit in a transaction.",
         "tags": ["Bookings"],
         "security": [
           {
@@ -501,9 +611,32 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["status"],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "description": "Booking status value. Any value is accepted by validation, but the real flow uses values like pending, ongoing, completed, and cancelled."
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Booking status updated"
+          },
+          "400": {
+            "description": "Validation error or appointment not found"
+          },
+          "500": {
+            "description": "Unexpected server error"
           }
         }
       }
@@ -511,6 +644,7 @@
     "/api/auth": {
       "post": {
         "summary": "Authenticate a user",
+        "description": "Logs in a user by email and password and returns the JWT token in the response body.",
         "tags": ["Auth"],
         "requestBody": {
           "required": true,
@@ -532,7 +666,7 @@
             "description": "Authentication successful"
           },
           "400": {
-            "description": "Invalid credentials"
+            "description": "Invalid credentials or email not confirmed"
           }
         }
       }
@@ -540,6 +674,7 @@
     "/api/auth/confirmation/{token}": {
       "get": {
         "summary": "Confirm a user email",
+        "description": "Verifies and activates a customer account after receipt of a confirmation token.",
         "tags": ["Auth"],
         "parameters": [
           {
@@ -554,6 +689,9 @@
         "responses": {
           "200": {
             "description": "Email confirmation response"
+          },
+          "500": {
+            "description": "Token verification or update failed"
           }
         }
       }
@@ -569,7 +707,7 @@
         ],
         "responses": {
           "200": {
-            "description": "A list of user types"
+            "description": "List of user types"
           }
         }
       },
@@ -598,6 +736,9 @@
         "responses": {
           "200": {
             "description": "User type created"
+          },
+          "400": {
+            "description": "Validation error or duplicate type"
           }
         }
       }
