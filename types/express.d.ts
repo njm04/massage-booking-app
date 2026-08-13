@@ -5,8 +5,8 @@ export interface AuthenticatedUser {
   lastName?: string;
   userType?:
     | {
-        _id: string;
-        name: string;
+        _id?: string;
+        name?: string;
       }
     | string
     | null;

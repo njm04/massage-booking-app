@@ -13,8 +13,29 @@ import { swaggerDocs, swaggerUiMiddleware } from "../docs/swagger.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const allowedOrigins = (
+  process.env.ALLOWED_ORIGINS ?? "http://localhost:3000,http://localhost:5173"
+)
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 const corsOptions = {
-  exposedHeaders: "x-auth-token",
+  origin: (
+    origin: string | undefined,
+    callback: (error: Error | null, allow?: boolean) => void,
+  ) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "x-auth-token"],
+  exposedHeaders: ["x-auth-token"],
 };
 
 export default (app: express.Express) => {
@@ -27,11 +48,15 @@ export default (app: express.Express) => {
   app.set("view engine", "handlebars");
   app.use(express.json());
   app.use(cors(corsOptions));
-  app.use(
-    "/api-docs",
-    swaggerUiMiddleware.serve,
-    swaggerUiMiddleware.setup(swaggerDocs),
-  );
+
+  if (process.env.NODE_ENV !== "production") {
+    app.use(
+      "/api-docs",
+      swaggerUiMiddleware.serve,
+      swaggerUiMiddleware.setup(swaggerDocs),
+    );
+  }
+
   app.use("/api/users", users);
   app.use("/api/auth", auth);
   app.use("/api/bookings", bookings);

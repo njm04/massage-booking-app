@@ -8,13 +8,10 @@ import { Customer } from "../models/customer.model.js";
 import { UserType } from "../models/userType.model.js";
 import { Therapist } from "../models/therapist.model.js";
 import transporter from "../startup/transporter.js";
+import type { AuthenticatedUser } from "../types/express.js";
 
 type AuthRequest = Request & {
-  user?: {
-    userType?: { _id?: string; name?: string };
-    _id?: string;
-    [key: string]: any;
-  };
+  user?: AuthenticatedUser;
 };
 
 const UserTypesEnum = Object.freeze({
@@ -256,10 +253,14 @@ export const updateBooking = async (req: AuthRequest, res: Response) => {
 
 export const deleteBooking = async (req: AuthRequest, res: Response) => {
   const options = { new: true };
-  const { userType } = req.user ?? {};
+  const userType = req.user?.userType;
+  const userTypeName =
+    typeof userType === "object" && userType !== null
+      ? userType.name
+      : undefined;
   let booking: any;
   try {
-    if (userType?.name === "customer") {
+    if (userTypeName === "customer") {
       booking = await Booking.findByIdAndUpdate(
         req.params.id,
         { status: "cancelled" },

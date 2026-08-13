@@ -16,13 +16,33 @@ const validate = (req: Record<string, any>) => {
   return schema.validate(req);
 };
 
+export const canUserLogin = ({
+  confirmed,
+  status,
+  userTypeName,
+}: {
+  confirmed?: boolean;
+  status?: string;
+  userTypeName?: string | null;
+}) => {
+  if (userTypeName === "customer" && !confirmed) {
+    return { allowed: false, reason: "Please verify your email." };
+  }
+
+  if (status === "suspend") {
+    return { allowed: false, reason: "Account has been suspended" };
+  }
+
+  return { allowed: true, reason: null };
+};
+
 export const login = async (req: Request, res: Response) => {
   const { error } = validate(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
   const user = await User.findOne({ email: req.body.email })
     .populate("userType", "_id name")
-    .select("_id name password firstName lastName status confirmed userType");
+    .select("+password _id name firstName lastName status confirmed userType");
 
   if (!user) return res.status(400).send("Invalid password or email");
 
@@ -47,10 +67,13 @@ export const login = async (req: Request, res: Response) => {
     status: string;
   };
 
-  if (!typedUser.confirmed && userTypeName === "customer")
-    return res.status(400).send("Please verify your email.");
-  if (typedUser.status === "suspend")
-    return res.status(400).send("Account has been suspended");
+  const loginCheck = canUserLogin({
+    confirmed: typedUser.confirmed,
+    status: typedUser.status,
+    userTypeName,
+  });
+
+  if (!loginCheck.allowed) return res.status(400).send(loginCheck.reason);
 
   const validPassword = await bcrypt.compare(
     req.body.password,

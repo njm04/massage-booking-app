@@ -10,12 +10,20 @@ export default () => {
     ["EMAIL_SECRET", "booking_emailSecret"],
   ];
 
-  for (const [key, envKey] of required) {
-    const value = getConfigValue(key, envKey);
-    if (!value) {
-      winston.warn(
-        `Configuration value '${envKey}' is not set; continuing without it.`,
-      );
-    }
+  const missing = required.filter(
+    ([key, envKey]) => !getConfigValue(key, envKey),
+  );
+
+  if (process.env.NODE_ENV === "production" && missing.length > 0) {
+    const names = missing.map(([, envKey]) => envKey).join(", ");
+    throw new Error(
+      `Missing required production configuration: ${names}. Set the environment variables before starting the app.`,
+    );
+  }
+
+  for (const [, envKey] of missing) {
+    winston.warn(
+      `Configuration value '${envKey}' is not set; continuing without it.`,
+    );
   }
 };

@@ -10,13 +10,10 @@ import { Customer } from "../models/customer.model.js";
 import { UserType } from "../models/userType.model.js";
 import { Booking } from "../models/booking.model.js";
 import transporter from "../startup/transporter.js";
+import type { AuthenticatedUser } from "../types/express.js";
 
 type AuthRequest = Request & {
-  user?: {
-    _id?: string;
-    userType?: { name?: string };
-    [key: string]: any;
-  };
+  user?: AuthenticatedUser;
 };
 
 const validateEditUser = (req: Record<string, any>) => {
@@ -113,9 +110,8 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
 
 export const registerCustomer = async (req: AuthRequest, res: Response) => {
   try {
-    let userType = req.body.userType
-      ? await UserType.findById(req.body.userType)
-      : await UserType.findOne({ name: "customer" });
+    // Public registration must always self-assign "customer"; never trust a client-supplied userType.
+    let userType = await UserType.findOne({ name: "customer" });
 
     if (!userType) {
       userType = await UserType.create({ name: "customer" });
@@ -156,9 +152,12 @@ export const registerCustomer = async (req: AuthRequest, res: Response) => {
     } catch (emailError) {
       console.warn("Email confirmation skipped", emailError);
     }
-    const token = (user as any).generateAuthToken();
     user = await (User as any).findUserByIdAndPopulate(user._id);
-    res.header("x-auth-token", token).send(user);
+    res.status(201).send({
+      message:
+        "Registration successful. Please verify your email before logging in.",
+      user,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).send("Unexpected error occured");
@@ -276,7 +275,11 @@ export const changePassword = async (req: Request, res: Response) => {
   const { error } = validatePassword(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
-  let user = await User.findById(req.params.id);
+  if (req.user?._id !== req.params.id) {
+    return res.status(403).send("Access denied");
+  }
+
+  let user = await User.findById(req.params.id).select("+password");
   if (!user) return res.status(404).send("User not found");
 
   const validPassword = await bcrypt.compare(req.body.password, user.password);

@@ -55,7 +55,7 @@ const userSchema = new mongoose.Schema<UserDocument>(
       enum: ["active", "suspend", "unverified"],
       default: "active",
     },
-    password: { type: String, required: true },
+    password: { type: String, required: true, select: false },
     userType: { type: mongoose.Schema.Types.ObjectId, ref: "UserType" },
     isDeleted: { type: Boolean, required: true, default: false },
   },
@@ -83,7 +83,7 @@ userSchema.methods.generateAuthToken = function (this: UserDocument) {
   const secret = getConfigValue("jwtPrivateKey", "booking_jwtPrivateKey");
   if (!secret) throw new Error("JWT secret is not configured");
 
-  return jwt.sign(payload, secret);
+  return jwt.sign(payload, secret, { expiresIn: "7d" });
 };
 
 userSchema.statics.findUserByIdAndPopulate = function (

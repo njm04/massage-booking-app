@@ -3,3 +3,6 @@ tmpnodejsnpm-cache/
 dist
 
 *.log
+.env
+.env.*
+!.env.example
