@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:5000/api-docs",
+      "url": "http://localhost:5000",
       "description": "Local development server"
     }
   ],
@@ -267,6 +267,7 @@
     "/api/users/change-password/{id}": {
       "put": {
         "summary": "Change a user's password",
+        "description": "Only the authenticated user matching the target user ID can change that password. Requests from other users receive a 403 response.",
         "tags": ["Users"],
         "security": [
           {
@@ -309,6 +310,9 @@
           },
           "400": {
             "description": "Validation error or mismatched password confirmation"
+          },
+          "403": {
+            "description": "Authenticated user is not allowed to change this password"
           },
           "404": {
             "description": "User not found"
