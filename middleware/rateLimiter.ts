@@ -4,6 +4,7 @@ type RateLimiterOptions = {
   windowMs: number;
   max: number;
   message: string;
+  keyGenerator?: Options["keyGenerator"];
 };
 
 // Shared factory so every public, unauthenticated endpoint uses the same IPv6-safe key generation.
@@ -11,6 +12,7 @@ export const createRateLimiter = ({
   windowMs,
   max,
   message,
+  keyGenerator,
 }: RateLimiterOptions) =>
   rateLimit({
     windowMs,
@@ -18,5 +20,6 @@ export const createRateLimiter = ({
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: message },
-    keyGenerator: (req) => ipKeyGenerator(req.ip ?? "unknown"),
+    keyGenerator:
+      keyGenerator ?? ((req) => ipKeyGenerator(req.ip ?? "unknown")),
   } satisfies Partial<Options>);

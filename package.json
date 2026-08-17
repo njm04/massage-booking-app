@@ -8,6 +8,7 @@
     "dev": "tsx watch server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
+    "migrate:discriminators": "tsx scripts/migrate-discriminators.ts",
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config ./jest.config.cjs --runInBand"
   },
   "engines": {

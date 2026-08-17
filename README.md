@@ -82,6 +82,32 @@ npm start
 npm run dev
 ```
 
+### Migrate discriminator records
+
+Run this once if existing therapist or customer records use Mongoose's old `__t` field or are missing the current `kind` discriminator field. The migration is idempotent and does not run automatically when the server starts.
+
+PowerShell:
+
+```powershell
+$env:booking_ATLAS_DB = "your MongoDB connection string"
+npm run migrate:discriminators
+```
+
+Bash:
+
+```bash
+export booking_ATLAS_DB="your MongoDB connection string"
+npm run migrate:discriminators
+```
+
+If `booking_ATLAS_DB` is already in your local `.env` file, run only:
+
+```bash
+npm run migrate:discriminators
+```
+
+The script finds therapist and customer users, sets the matching `kind` value, removes the obsolete `__t` field, and initializes missing therapist `isAvailable` and `reservations` fields without overwriting existing values. It does not change customer verification fields. Review the reported counts, then restart the API and retry user lookups.
+
 ## API docs
 
 Swagger UI is exposed at:

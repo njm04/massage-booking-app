@@ -42,7 +42,9 @@ export const login = async (req: Request, res: Response) => {
 
   const user = await User.findOne({ email: req.body.email })
     .populate("userType", "_id name")
-    .select("+password _id name firstName lastName status confirmed userType");
+    .select(
+      "+password _id name firstName lastName status confirmed userType email",
+    );
 
   if (!user) return res.status(400).send("Invalid password or email");
 
@@ -61,14 +63,13 @@ export const login = async (req: Request, res: Response) => {
   }
 
   const typedUser = user as typeof user & {
-    confirmed?: boolean;
     generateAuthToken: () => string;
     password: string;
     status: string;
   };
 
   const loginCheck = canUserLogin({
-    confirmed: typedUser.confirmed,
+    confirmed: user.get("confirmed") as boolean,
     status: typedUser.status,
     userTypeName,
   });

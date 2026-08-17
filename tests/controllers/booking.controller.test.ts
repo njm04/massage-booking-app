@@ -8,6 +8,7 @@ import { User } from "../../models/user.model.js";
 import transporter from "../../startup/transporter.js";
 import {
   createBooking,
+  deleteBooking,
   getBookings,
   updateBookingStatus,
 } from "../../controllers/booking.controller.js";
@@ -42,32 +43,26 @@ describe("booking controller", () => {
     } as any;
     const res = { status: jest.fn().mockReturnThis(), send: jest.fn() } as any;
 
-    jest
-      .spyOn(User, "findById")
-      .mockResolvedValue({
-        _id: "u1",
-        firstName: "Jane",
-        lastName: "Doe",
-        email: "jane@example.com",
-      } as any);
-    jest
-      .spyOn(Therapist, "findById")
-      .mockResolvedValue({
-        _id: "therapist-1",
-        firstName: "Sam",
-        lastName: "Lee",
-      } as any);
+    jest.spyOn(User, "findById").mockResolvedValue({
+      _id: "u1",
+      firstName: "Jane",
+      lastName: "Doe",
+      email: "jane@example.com",
+    } as any);
+    jest.spyOn(Therapist, "findById").mockResolvedValue({
+      _id: "therapist-1",
+      firstName: "Sam",
+      lastName: "Lee",
+    } as any);
     jest
       .spyOn(UserType, "findById")
       .mockResolvedValue({ _id: "t1", name: "customer" } as any);
-    jest
-      .spyOn(Customer, "findById")
-      .mockResolvedValue({
-        _id: "u1",
-        firstName: "Jane",
-        lastName: "Doe",
-        email: "jane@example.com",
-      } as any);
+    jest.spyOn(Customer, "findById").mockResolvedValue({
+      _id: "u1",
+      firstName: "Jane",
+      lastName: "Doe",
+      email: "jane@example.com",
+    } as any);
     jest.spyOn(transporter, "sendMail").mockResolvedValue({} as any);
 
     const bookingCtor = jest
@@ -124,5 +119,120 @@ describe("booking controller", () => {
       { new: true },
     );
     expect(res.send).toHaveBeenCalledWith({ _id: "b1", status: "pending" });
+  });
+
+  it("does not allow therapists to cancel bookings", async () => {
+    const booking = {
+      _id: "b1",
+      date: new Date(Date.now() + 48 * 60 * 60 * 1000),
+      customer: { email: "customer@example.com" },
+    };
+    const req = {
+      params: { id: "b1" },
+      user: { _id: "therapist-1", userType: { name: "therapist" } },
+    } as any;
+    const res = { status: jest.fn().mockReturnThis(), send: jest.fn() } as any;
+
+    jest.spyOn(Booking, "findOne").mockResolvedValue(booking as any);
+    const update = jest.spyOn(Booking, "findByIdAndUpdate");
+
+    await deleteBooking(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.send).toHaveBeenCalledWith(
+      "Therapists cannot cancel customer appointments",
+    );
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("does not allow customers to cancel within 24 hours", async () => {
+    const booking = {
+      _id: "b1",
+      date: new Date(Date.now() + 23 * 60 * 60 * 1000),
+      customer: { email: "customer@example.com" },
+    };
+    const req = {
+      params: { id: "b1" },
+      user: {
+        _id: "customer-1",
+        email: "customer@example.com",
+        userType: { name: "customer" },
+      },
+    } as any;
+    const res = { status: jest.fn().mockReturnThis(), send: jest.fn() } as any;
+
+    jest.spyOn(Booking, "findOne").mockResolvedValue(booking as any);
+    const update = jest.spyOn(Booking, "findByIdAndUpdate");
+
+    await deleteBooking(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.send).toHaveBeenCalledWith(
+      "Customers can only cancel appointments 24 hours in advance",
+    );
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("allows customers to cancel their booking at least 24 hours ahead", async () => {
+    const booking = {
+      _id: "b1",
+      date: new Date(Date.now() + 24 * 60 * 60 * 1000 + 1000),
+      customer: { email: "customer@example.com" },
+      therapist: { _id: "therapist-1" },
+    };
+    const cancelledBooking = { ...booking, status: "cancelled" };
+    const req = {
+      params: { id: "b1" },
+      user: {
+        _id: "customer-1",
+        email: "CUSTOMER@example.com",
+        userType: { name: "customer" },
+      },
+    } as any;
+    const res = { status: jest.fn().mockReturnThis(), send: jest.fn() } as any;
+
+    jest.spyOn(Booking, "findOne").mockResolvedValue(booking as any);
+    jest
+      .spyOn(Booking, "findByIdAndUpdate")
+      .mockResolvedValue(cancelledBooking as any);
+    jest.spyOn(Therapist, "updateOne").mockResolvedValue({} as any);
+
+    await deleteBooking(req, res);
+
+    expect(Booking.findByIdAndUpdate).toHaveBeenCalledWith(
+      "b1",
+      { status: "cancelled" },
+      { new: true },
+    );
+    expect(res.send).toHaveBeenCalledWith(cancelledBooking);
+  });
+
+  it("allows admins to cancel at any time", async () => {
+    const booking = {
+      _id: "b1",
+      date: new Date(Date.now() + 60 * 60 * 1000),
+      therapist: { _id: "therapist-1" },
+    };
+    const deletedBooking = { ...booking, isDeleted: true };
+    const req = {
+      params: { id: "b1" },
+      user: { _id: "admin-1", userType: { name: "admin" } },
+    } as any;
+    const res = { status: jest.fn().mockReturnThis(), send: jest.fn() } as any;
+
+    jest.spyOn(Booking, "findOne").mockResolvedValue(booking as any);
+    jest
+      .spyOn(Booking, "findByIdAndUpdate")
+      .mockResolvedValue(deletedBooking as any);
+    jest.spyOn(Therapist, "updateOne").mockResolvedValue({} as any);
+
+    await deleteBooking(req, res);
+
+    expect(Booking.findByIdAndUpdate).toHaveBeenCalledWith(
+      "b1",
+      { isDeleted: true },
+      { new: true },
+    );
+    expect(res.send).toHaveBeenCalledWith(deletedBooking);
   });
 });

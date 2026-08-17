@@ -14,6 +14,19 @@ type AuthRequest = Request & {
   user?: AuthenticatedUser;
 };
 
+type BookingCancellationDocument = {
+  _id: mongoose.Types.ObjectId | string;
+  date: Date;
+  customer?: {
+    email?: string;
+  };
+  therapist?: {
+    _id?: mongoose.Types.ObjectId | string;
+  };
+};
+
+type BookingCancellationUpdate = { status: "cancelled" } | { isDeleted: true };
+
 const UserTypesEnum = Object.freeze({
   ADMIN: "admin",
   THERAPIST: "therapist",
@@ -116,14 +129,14 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
 
     await booking.save({ session });
 
-    await Therapist.updateOne(
-      { _id: therapist._id },
-      {
-        isAvailable: false,
-        $push: { reservations: reservation },
-      },
-      { session },
-    );
+    const therapistUpdate = {
+      isAvailable: false,
+      $push: { reservations: reservation },
+    };
+
+    await Therapist.updateOne({ _id: therapist._id }, therapistUpdate, {
+      session,
+    });
 
     await session.commitTransaction();
 
@@ -143,7 +156,6 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
 
 export const getBookings = async (req: AuthRequest, res: Response) => {
   let bookings: any[] = [];
-  console.log("req.user", req.user);
   const { userType: userTypeId, _id: userId } = req.user ?? {};
 
   const userType = await UserType.findById(userTypeId);
@@ -171,6 +183,9 @@ export const getBookings = async (req: AuthRequest, res: Response) => {
 export const updateBooking = async (req: AuthRequest, res: Response) => {
   let payload: Record<string, any> = {};
   let reservation: Record<string, any> = {};
+  const bookingId = Array.isArray(req.params.id)
+    ? req.params.id[0]
+    : req.params.id;
 
   const { error } = validate(req.body, req.user);
   if (error) return res.status(400).send(error.details[0].message);
@@ -179,12 +194,12 @@ export const updateBooking = async (req: AuthRequest, res: Response) => {
   if (!appointment) return res.status(400).send("Appointment not found");
 
   if (req.body.prevTherapist) {
-    const prevTherapist = (await User.findById(req.body.prevTherapist)) as any;
+    const prevTherapist = await Therapist.findById(req.body.prevTherapist);
     if (!prevTherapist) return res.status(400).send("Therapist not found.");
     prevTherapist.reservations.pull(req.params.id);
     await prevTherapist.save();
 
-    const newTherapist = (await User.findById(req.body.therapist)) as any;
+    const newTherapist = await Therapist.findById(req.body.therapist);
     if (!newTherapist) return res.status(400).send("Therapist not found.");
     payload = {
       therapist: {
@@ -227,10 +242,10 @@ export const updateBooking = async (req: AuthRequest, res: Response) => {
       zip: req.body.zip,
     };
 
-    const therapist = (await User.findById(req.body.therapist)) as any;
+    const therapist = await Therapist.findById(req.body.therapist);
     if (!therapist) return res.status(400).send("Therapist not found.");
 
-    const reservationItem = therapist.reservations?.id?.(req.params.id);
+    const reservationItem = therapist.reservations?.id?.(bookingId);
     if (reservationItem) {
       reservationItem.duration = req.body.duration;
       reservationItem.date = req.body.date;
@@ -252,41 +267,76 @@ export const updateBooking = async (req: AuthRequest, res: Response) => {
 };
 
 export const deleteBooking = async (req: AuthRequest, res: Response) => {
-  const options = { new: true };
-  const userType = req.user?.userType;
-  const userTypeName =
-    typeof userType === "object" && userType !== null
-      ? userType.name
-      : undefined;
-  let booking: any;
   try {
-    if (userTypeName === "customer") {
-      booking = await Booking.findByIdAndUpdate(
-        req.params.id,
-        { status: "cancelled" },
-        options,
-      );
-    } else {
-      booking = await Booking.findByIdAndUpdate(
-        req.params.id,
-        { isDeleted: true },
-        options,
-      );
+    const booking = (await Booking.findOne({
+      _id: req.params.id,
+      isDeleted: false,
+    })) as BookingCancellationDocument | null;
+    if (!booking) return res.status(404).send("Booking not found");
+
+    const userType = req.user?.userType;
+    const userTypeId =
+      typeof userType === "object" && userType !== null
+        ? userType._id
+        : userType;
+    const userTypeName =
+      typeof userType === "object" && userType !== null
+        ? userType.name
+        : undefined;
+    const resolvedUserTypeName =
+      userTypeName ??
+      (await UserType.findById(userTypeId).select("name"))?.name;
+
+    if (resolvedUserTypeName === "therapist") {
+      return res
+        .status(403)
+        .send("Therapists cannot cancel customer appointments");
     }
 
-    if (!booking) return res.status(400).send("Booking not found");
+    let update: BookingCancellationUpdate;
+    if (resolvedUserTypeName === "customer") {
+      const bookingEmail = booking.customer?.email?.trim().toLowerCase();
+      const userEmail = req.user?.email?.trim().toLowerCase();
+      const ownsBooking = Boolean(
+        bookingEmail && userEmail && bookingEmail === userEmail,
+      );
 
-    const therapistRef = (booking as any).therapist;
+      if (!ownsBooking) return res.status(403).send("Access denied");
+
+      const hoursUntilAppointment =
+        (new Date(booking.date).getTime() - Date.now()) / (1000 * 60 * 60);
+      if (hoursUntilAppointment < 24) {
+        return res
+          .status(400)
+          .send("Customers can only cancel appointments 24 hours in advance");
+      }
+
+      update = { status: "cancelled" };
+    } else if (resolvedUserTypeName === "admin") {
+      update = { isDeleted: true };
+    } else {
+      return res.status(403).send("Access denied");
+    }
+
+    const updatedBooking = (await Booking.findByIdAndUpdate(
+      req.params.id,
+      update,
+      { new: true },
+    )) as BookingCancellationDocument | null;
+
+    if (!updatedBooking) return res.status(404).send("Booking not found");
+
+    const therapistRef = updatedBooking.therapist;
     if (therapistRef?._id) {
       await Therapist.updateOne(
         { _id: therapistRef._id },
-        { $pull: { reservations: { _id: booking._id } } },
+        { $pull: { reservations: { _id: updatedBooking._id } } },
       );
     }
 
-    res.send(booking);
+    res.send(updatedBooking);
   } catch (error) {
-    res.status(500).send("Unexpected error occured");
+    res.status(500).send("Unexpected error occurred");
   }
 };
 
@@ -346,4 +396,19 @@ export const updateBookingStatus = async (req: Request, res: Response) => {
   } catch (error) {
     res.status(500).send("Unexpected error occured");
   }
+};
+
+export const getTodaysBookings = async (req: AuthRequest, res: Response) => {
+  const today = dayjs().startOf("day");
+  const tomorrow = dayjs(today).add(1, "day");
+  const bookings = await Booking.find({
+    date: {
+      $gte: today.toDate(),
+      $lt: tomorrow.toDate(),
+    },
+    isDeleted: 0,
+    status: { $ne: "cancelled" },
+  });
+
+  res.send({ bookings, total: bookings.length });
 };

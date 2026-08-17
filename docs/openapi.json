@@ -63,8 +63,7 @@
                   "email",
                   "birthDate",
                   "gender",
-                  "password",
-                  "userType"
+                  "password"
                 ],
                 "properties": {
                   "firstName": { "type": "string" },
@@ -75,7 +74,7 @@
                   "password": { "type": "string", "minLength": 5 },
                   "userType": {
                     "type": "string",
-                    "description": "Optional ObjectId of a user type. If omitted, customer is used."
+                    "description": "Ignored for public registration; the server assigns the customer user type."
                   }
                 },
                 "additionalProperties": false
@@ -84,7 +83,7 @@
           }
         },
         "responses": {
-          "200": {
+          "201": {
             "description": "User registered successfully"
           },
           "400": {
@@ -468,6 +467,47 @@
         }
       }
     },
+    "/api/bookings/today": {
+      "get": {
+        "summary": "Get today's bookings",
+        "description": "Returns non-deleted, non-cancelled bookings scheduled for the current server calendar day. Admin access is required.",
+        "tags": ["Bookings"],
+        "security": [
+          {
+            "xAuthToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Today's bookings and total count",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["bookings", "total"],
+                  "properties": {
+                    "bookings": {
+                      "type": "array",
+                      "items": { "type": "object" }
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Admin access required"
+          }
+        }
+      }
+    },
     "/api/bookings/{id}": {
       "put": {
         "summary": "Update a booking",
@@ -535,7 +575,7 @@
     "/api/bookings/delete/{id}": {
       "put": {
         "summary": "Delete or cancel a booking",
-        "description": "Customers cancel the booking by setting status to cancelled, while staff/admin delete it by setting isDeleted = true and removing therapist reservation metadata.",
+        "description": "Customers may cancel only their own booking at least 24 hours before the appointment. Admins may cancel at any time. Therapists cannot cancel customer appointments. Customer cancellations set status to cancelled; admin cancellations soft-delete the booking with isDeleted = true.",
         "tags": ["Bookings"],
         "security": [
           {
@@ -557,6 +597,12 @@
             "description": "Booking deletion or cancellation applied"
           },
           "400": {
+            "description": "Booking is within the customer's 24-hour cancellation window"
+          },
+          "403": {
+            "description": "Therapists cannot cancel bookings, or the customer does not own the booking"
+          },
+          "404": {
             "description": "Booking not found"
           },
           "500": {
@@ -671,6 +717,9 @@
           },
           "400": {
             "description": "Invalid credentials or email not confirmed"
+          },
+          "429": {
+            "description": "Too many login attempts for this IP and email combination"
           }
         }
       }

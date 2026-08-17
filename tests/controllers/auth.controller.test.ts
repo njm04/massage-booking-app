@@ -65,7 +65,7 @@ describe("auth controller", () => {
     await login(req, res);
 
     expect(query.select).toHaveBeenCalledWith(
-      "+password _id name firstName lastName status confirmed userType",
+      "+password _id name firstName lastName status confirmed userType kind",
     );
     expect(bcrypt.compare).toHaveBeenCalledWith("secret", "hashed-pass");
     expect(res.send).toHaveBeenCalledWith("token-123");
