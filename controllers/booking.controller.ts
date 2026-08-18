@@ -2,11 +2,15 @@ import type { Request, Response } from "express";
 import Joi from "joi";
 import mongoose from "mongoose";
 import dayjs from "dayjs";
-import { Booking, validate } from "../models/booking.model.js";
+import {
+  Booking,
+  validate,
+  type BookingDocument,
+} from "../models/booking.model.js";
 import { User } from "../models/user.model.js";
 import { Customer } from "../models/customer.model.js";
 import { UserType } from "../models/userType.model.js";
-import { Therapist } from "../models/therapist.model.js";
+import { Therapist, type Reservation } from "../models/therapist.model.js";
 import transporter from "../startup/transporter.js";
 import type { AuthenticatedUser } from "../types/express.js";
 
@@ -123,14 +127,7 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
 
     await booking.save({ session });
 
-    const therapistUpdate = {
-      isAvailable: false,
-      $push: { reservations: reservation },
-    };
-
-    await Therapist.updateOne({ _id: therapist._id }, therapistUpdate, {
-      session,
-    });
+    await therapist.addReservation(reservation, session);
 
     await session.commitTransaction();
 
@@ -176,10 +173,13 @@ export const getBookings = async (req: AuthRequest, res: Response) => {
 
 export const updateBooking = async (req: AuthRequest, res: Response) => {
   let payload: Record<string, any> = {};
-  let reservation: Record<string, any> = {};
-  const bookingId = Array.isArray(req.params.id)
-    ? req.params.id[0]
-    : req.params.id;
+  let reservation: Reservation = {
+    _id: new mongoose.Types.ObjectId(),
+    massageType: "",
+    name: "",
+    duration: 0,
+    date: new Date(),
+  };
 
   const { error } = validate(req.body, req.user);
   if (error) return res.status(400).send(error.details[0].message);
@@ -190,8 +190,7 @@ export const updateBooking = async (req: AuthRequest, res: Response) => {
   if (req.body.prevTherapist) {
     const prevTherapist = await Therapist.findById(req.body.prevTherapist);
     if (!prevTherapist) return res.status(400).send("Therapist not found.");
-    prevTherapist.reservations.pull(req.params.id);
-    await prevTherapist.save();
+    await prevTherapist.removeReservation(appointment._id);
 
     const newTherapist = await Therapist.findById(req.body.therapist);
     if (!newTherapist) return res.status(400).send("Therapist not found.");
@@ -214,8 +213,7 @@ export const updateBooking = async (req: AuthRequest, res: Response) => {
 
     reservation = appointment.createReservation();
 
-    newTherapist.reservations.push(reservation);
-    await newTherapist.save();
+    await newTherapist.addReservation(reservation);
   } else {
     payload = {
       massageType: req.body.massageType,
@@ -232,7 +230,10 @@ export const updateBooking = async (req: AuthRequest, res: Response) => {
     const therapist = await Therapist.findById(req.body.therapist);
     if (!therapist) return res.status(400).send("Therapist not found.");
 
-    const reservationItem = therapist.reservations?.id?.(bookingId);
+    const reservationItem: Reservation | undefined =
+      therapist.reservations.find((reservation) =>
+        reservation._id.equals(appointment._id),
+      );
     if (reservationItem) {
       reservationItem.duration = req.body.duration;
       reservationItem.date = req.body.date;
@@ -338,7 +339,7 @@ export const updateBookingStatus = async (req: Request, res: Response) => {
   const { error } = validateStatus(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
-  let booking = await Booking.findById(req.params.id);
+  let booking: BookingDocument | null = await Booking.findById(req.params.id);
   if (!booking) return res.status(400).send("Appointment not found");
 
   try {
@@ -361,9 +362,9 @@ export const updateBookingStatus = async (req: Request, res: Response) => {
           { status: req.body.status },
           { session },
         );
-        const therapistRef = (booking as any).therapist;
+        const therapistRef = booking.therapist;
         if (therapistRef?._id) {
-          await User.updateOne(
+          await Therapist.updateOne(
             { _id: therapistRef._id },
             { $pull: { reservations: { _id: booking._id } } },
             { session },

@@ -4,8 +4,9 @@ import JoiObjectId from "joi-objectid";
 
 (Joi as any).objectId = JoiObjectId(Joi);
 
-interface BookingDocument extends mongoose.Document {
+export interface BookingDocument extends mongoose.Document {
   createdBy: {
+    _id?: mongoose.Types.ObjectId;
     firstName: string;
     lastName: string;
     userType: {
@@ -13,10 +14,12 @@ interface BookingDocument extends mongoose.Document {
     };
   };
   therapist: {
+    _id?: mongoose.Types.ObjectId;
     firstName: string;
     lastName: string;
   };
   customer: {
+    _id?: mongoose.Types.ObjectId;
     firstName: string;
     lastName: string;
     email: string;
