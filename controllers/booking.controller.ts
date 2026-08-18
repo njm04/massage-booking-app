@@ -119,13 +119,7 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
   session.startTransaction();
 
   try {
-    const reservation = {
-      _id: booking._id,
-      massageType: booking.massageType,
-      name: `${customer.firstName} ${customer.lastName}`,
-      duration: booking.duration,
-      date: booking.date,
-    };
+    const reservation = booking.createReservation();
 
     await booking.save({ session });
 
@@ -218,14 +212,7 @@ export const updateBooking = async (req: AuthRequest, res: Response) => {
       zip: req.body.zip,
     };
 
-    const createdBy = (appointment as any).createdBy ?? {};
-    reservation = {
-      _id: appointment._id,
-      massageType: appointment.massageType,
-      name: `${createdBy.firstName ?? ""} ${createdBy.lastName ?? ""}`.trim(),
-      duration: appointment.duration,
-      date: appointment.date,
-    };
+    reservation = appointment.createReservation();
 
     newTherapist.reservations.push(reservation);
     await newTherapist.save();
