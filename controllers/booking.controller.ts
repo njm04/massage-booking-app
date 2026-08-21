@@ -161,11 +161,13 @@ export const getBookings = async (req: AuthRequest, res: Response) => {
       isDeleted: false,
       "customer._id": userId,
     });
-  } else {
+  } else if (userType.name === UserTypesEnum.THERAPIST) {
     bookings = await Booking.find({
       isDeleted: false,
       "therapist._id": userId,
     });
+  } else {
+    return res.status(400).send("Invalid user type.");
   }
 
   return res.send(bookings);
