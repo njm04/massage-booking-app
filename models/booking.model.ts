@@ -4,7 +4,47 @@ import JoiObjectId from "joi-objectid";
 
 (Joi as any).objectId = JoiObjectId(Joi);
 
-const bookingSchema = new mongoose.Schema(
+export interface BookingDocument extends mongoose.Document {
+  createdBy: {
+    _id?: mongoose.Types.ObjectId;
+    firstName: string;
+    lastName: string;
+    userType: {
+      name: string;
+    };
+  };
+  therapist: {
+    _id?: mongoose.Types.ObjectId;
+    firstName: string;
+    lastName: string;
+  };
+  customer: {
+    _id?: mongoose.Types.ObjectId;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  massageType: string;
+  duration: number;
+  contactNumber: string;
+  address: string;
+  addressTwo?: string;
+  state: string;
+  city: string;
+  zip: string;
+  date: Date;
+  isDeleted: boolean;
+  status: "pending" | "ongoing" | "completed" | "cancelled";
+  createReservation(): {
+    _id: mongoose.Types.ObjectId;
+    massageType: string;
+    name: string;
+    duration: number;
+    date: Date;
+  };
+}
+
+const bookingSchema = new mongoose.Schema<BookingDocument>(
   {
     createdBy: {
       type: new mongoose.Schema({
@@ -52,6 +92,16 @@ const bookingSchema = new mongoose.Schema(
     timestamps: true,
   },
 );
+
+bookingSchema.methods.createReservation = function (this: BookingDocument) {
+  return {
+    _id: this._id,
+    massageType: this.massageType,
+    name: `${this.customer.firstName ?? ""} ${this.customer.lastName ?? ""}`.trim(),
+    duration: this.duration,
+    date: this.date,
+  };
+};
 
 const validateBookings = (bookings: Record<string, any>, user: any) => {
   const schema = Joi.object({

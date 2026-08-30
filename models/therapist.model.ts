@@ -1,7 +1,30 @@
 import mongoose from "mongoose";
 import { User } from "./user.model.js";
 
-const therapistSchema = new mongoose.Schema(
+export interface Reservation {
+  _id: mongoose.Types.ObjectId;
+  massageType: string;
+  name: string;
+  duration: number;
+  date: Date;
+}
+
+interface TherapistDocument extends mongoose.Document {
+  isAvailable: boolean;
+  reservations: Reservation[];
+  createdBy: {
+    firstName: string;
+    lastName: string;
+    userType: string;
+  };
+  addReservation(
+    reservation: Reservation,
+    session?: mongoose.ClientSession,
+  ): Promise<void>;
+  removeReservation(reservationId: mongoose.Types.ObjectId): Promise<void>;
+}
+
+const therapistSchema = new mongoose.Schema<TherapistDocument>(
   {
     isAvailable: { type: Boolean, required: true, default: true },
     reservations: [
@@ -24,6 +47,31 @@ const therapistSchema = new mongoose.Schema(
   },
   { timestamps: true },
 );
+
+therapistSchema.methods.addReservation = async function (
+  this: TherapistDocument,
+  reservation: {
+    _id: mongoose.Types.ObjectId;
+    massageType: string;
+    name: string;
+    duration: number;
+    date: Date;
+  },
+  session?: mongoose.ClientSession,
+) {
+  this.reservations.push(reservation);
+  return this.save({ session });
+};
+
+therapistSchema.methods.removeReservation = async function (
+  this: TherapistDocument,
+  reservationId: mongoose.Types.ObjectId,
+) {
+  this.reservations = this.reservations.filter(
+    (reservation) => !reservation._id.equals(reservationId),
+  );
+  return this.save();
+};
 
 const Therapist = User.discriminator("therapist", therapistSchema);
 
