@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import adminMiddleware from "../../middleware/admin.js";
-import { UserType } from "../../models/userType.model.js";
 
 describe("admin middleware", () => {
   beforeEach(() => {
@@ -8,13 +7,11 @@ describe("admin middleware", () => {
   });
 
   it("allows admin users", async () => {
-    const req = { user: { userType: { _id: "u1" } } } as any;
+    const req = {
+      user: { userType: { _id: "u1", name: "admin" } },
+    } as any;
     const res = { status: jest.fn().mockReturnThis(), send: jest.fn() } as any;
     const next = jest.fn();
-
-    jest
-      .spyOn(UserType, "findById")
-      .mockResolvedValue({ name: "admin" } as any);
 
     await adminMiddleware(req, res, next);
 
@@ -22,13 +19,11 @@ describe("admin middleware", () => {
   });
 
   it("rejects non-admin users", async () => {
-    const req = { user: { userType: { _id: "u1" } } } as any;
+    const req = {
+      user: { userType: { _id: "u1", name: "customer" } },
+    } as any;
     const res = { status: jest.fn().mockReturnThis(), send: jest.fn() } as any;
     const next = jest.fn();
-
-    jest
-      .spyOn(UserType, "findById")
-      .mockResolvedValue({ name: "customer" } as any);
 
     await adminMiddleware(req, res, next);
 

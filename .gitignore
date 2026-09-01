@@ -6,3 +6,6 @@ dist
 .env
 .env.*
 !.env.example
+
+# Generated enhancement review documentation
+docs/enhancement-*.md

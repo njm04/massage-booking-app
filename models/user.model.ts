@@ -83,7 +83,7 @@ userSchema.methods.generateAuthToken = function (this: UserDocument) {
   const secret = getConfigValue("jwtPrivateKey", "booking_jwtPrivateKey");
   if (!secret) throw new Error("JWT secret is not configured");
 
-  return jwt.sign(payload, secret, { expiresIn: "7d" });
+  return jwt.sign(payload, secret, { expiresIn: "1d" });
 };
 
 userSchema.statics.findUserByIdAndPopulate = function (

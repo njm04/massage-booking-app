@@ -1,5 +1,6 @@
 import express from "express";
 import auth from "../middleware/auth.js";
+import admin from "../middleware/admin.js";
 import {
   getUserTypes,
   createUserType,
@@ -7,7 +8,7 @@ import {
 
 const router = express.Router();
 
-router.get("/", auth, getUserTypes);
-router.post("/", auth, createUserType);
+router.get("/", [auth, admin], getUserTypes);
+router.post("/", [auth, admin], createUserType);
 
 export default router;

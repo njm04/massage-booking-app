@@ -7,6 +7,7 @@ import users from "../routes/users.js";
 import auth from "../routes/auth.js";
 import bookings from "../routes/bookings.js";
 import userTypes from "../routes/userTypes.js";
+import therapists from "../routes/therapists.js";
 import error from "../middleware/error.js";
 import { swaggerDocs, swaggerUiMiddleware } from "../docs/swagger.js";
 
@@ -61,5 +62,6 @@ export default (app: express.Express) => {
   app.use("/api/auth", auth);
   app.use("/api/bookings", bookings);
   app.use("/api/user-types", userTypes);
+  app.use("/api/therapists", therapists);
   app.use(error);
 };
