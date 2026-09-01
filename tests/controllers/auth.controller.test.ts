@@ -46,6 +46,9 @@ describe("auth controller", () => {
       status: "active",
       confirmed: true,
       userType: { _id: "type-1", name: "customer" },
+      get: jest.fn((path: string) =>
+        path === "confirmed" ? true : undefined,
+      ),
       generateAuthToken: jest.fn().mockReturnValue("token-123"),
     };
 
@@ -65,7 +68,7 @@ describe("auth controller", () => {
     await login(req, res);
 
     expect(query.select).toHaveBeenCalledWith(
-      "+password _id name firstName lastName status confirmed userType kind",
+      "+password _id name firstName lastName status confirmed userType email",
     );
     expect(bcrypt.compare).toHaveBeenCalledWith("secret", "hashed-pass");
     expect(res.send).toHaveBeenCalledWith("token-123");

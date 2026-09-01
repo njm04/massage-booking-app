@@ -116,6 +116,19 @@ Swagger UI is exposed at:
 http://localhost:5000/api-docs
 ```
 
+## Therapist directory
+
+Authenticated administrators, customers, and therapists can list active,
+non-deleted therapists:
+
+```http
+GET /api/therapists
+x-auth-token: <token>
+```
+
+The endpoint exposes only each therapist's ID, first name, and last name. It
+does not return availability, reservations, or private account fields.
+
 ## Typical app flow
 
 1. Start MongoDB
@@ -128,7 +141,7 @@ http://localhost:5000/api-docs
 ## Notes
 
 - The project is in a TypeScript migration phase, so keep new code in TypeScript and avoid reintroducing JS-only source files unless there is a clear reason.
-- Prefer the project conventions in `docs/rules-and-patterns.md` when adding new features.
+- Follow the repository-wide conventions in `AGENTS.md` when adding or changing features.
 - Do not commit secrets, generated build output, or local environment files.
 
 ## Useful commands

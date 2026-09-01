@@ -29,7 +29,7 @@
     "/api/users": {
       "get": {
         "summary": "Get all users",
-        "description": "Returns all users from the database without role filtering.",
+        "description": "Admin-only endpoint that returns all users from the database.",
         "tags": ["Users"],
         "responses": {
           "200": {
@@ -44,6 +44,12 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Authentication required or account is inactive"
+          },
+          "403": {
+            "description": "Admin access required"
           }
         }
       },
@@ -51,6 +57,7 @@
         "summary": "Register a customer",
         "description": "Public customer registration endpoint. The server assigns the default customer user type and unverified status.",
         "tags": ["Users"],
+        "security": [],
         "requestBody": {
           "required": true,
           "content": {
@@ -91,6 +98,46 @@
           },
           "500": {
             "description": "Unexpected server error"
+          }
+        }
+      }
+    },
+    "/api/therapists": {
+      "get": {
+        "summary": "List active therapists",
+        "description": "Returns active, non-deleted therapists for authenticated administrators, customers, and therapists. This version does not accept query parameters and does not expose availability, reservations, or private account fields.",
+        "tags": ["Therapists"],
+        "security": [
+          {
+            "xAuthToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Active therapists sorted by first name, last name, and ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["_id", "firstName", "lastName"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "_id": { "type": "string" },
+                      "firstName": { "type": "string" },
+                      "lastName": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required or account is inactive"
+          },
+          "403": {
+            "description": "The authenticated account has no supported therapist-directory role"
           }
         }
       }
@@ -176,7 +223,7 @@
     "/api/users/{id}": {
       "put": {
         "summary": "Update a user by id",
-        "description": "Updates basic profile details for a user. Therapist accounts cannot be suspended while they still have reservations.",
+        "description": "Admin-only endpoint that updates basic profile details for a user. Therapist accounts cannot be suspended while they still have reservations.",
         "tags": ["Users"],
         "security": [
           {
@@ -229,6 +276,9 @@
           "400": {
             "description": "Validation error, invalid user, or business-rule validation failure"
           },
+          "403": {
+            "description": "Admin access required"
+          },
           "500": {
             "description": "Unexpected server error"
           }
@@ -236,7 +286,7 @@
       },
       "delete": {
         "summary": "Delete a user by id",
-        "description": "Permanently removes the user record from the database.",
+        "description": "Admin-only endpoint that permanently removes the user record from the database.",
         "tags": ["Users"],
         "security": [
           {
@@ -256,6 +306,9 @@
         "responses": {
           "200": {
             "description": "User deleted successfully"
+          },
+          "403": {
+            "description": "Admin access required"
           },
           "404": {
             "description": "User not found"
@@ -383,14 +436,14 @@
           "200": {
             "description": "List of bookings"
           },
-          "400": {
-            "description": "Invalid user type"
+          "403": {
+            "description": "The authenticated account has no supported booking role"
           }
         }
       },
       "post": {
         "summary": "Create a booking",
-        "description": "Creates a new booking and marks the therapist unavailable while reserving the slot.",
+        "description": "Customers may create a booking for themselves, and admins may create one for a customer selected by email. Therapists cannot create customer bookings.",
         "tags": ["Bookings"],
         "security": [
           {
@@ -418,10 +471,6 @@
                   "therapist": {
                     "type": "string",
                     "description": "Therapist ObjectId"
-                  },
-                  "prevTherapist": {
-                    "type": "string",
-                    "description": "Previous therapist when reassigning a booking"
                   },
                   "massageType": { "type": "string" },
                   "duration": {
@@ -460,6 +509,9 @@
           },
           "400": {
             "description": "Validation error, invalid therapist, invalid user type, or customer not found"
+          },
+          "403": {
+            "description": "Only customers and admins may create bookings"
           },
           "500": {
             "description": "Unexpected server error"
@@ -511,7 +563,7 @@
     "/api/bookings/{id}": {
       "put": {
         "summary": "Update a booking",
-        "description": "Updates a booking's details. When a previous therapist is provided, the booking is reassigned to a new therapist and reservations are adjusted.",
+        "description": "Customers may update their own booking and admins may update any booking. Therapists must use the assignment-scoped status endpoint and cannot edit customer, scheduling, or therapist-assignment fields. When therapist is changed, the server derives the previous therapist from the stored booking rather than accepting a previous-therapist identifier from the request.",
         "tags": ["Bookings"],
         "security": [
           {
@@ -547,7 +599,6 @@
                 ],
                 "properties": {
                   "therapist": { "type": "string" },
-                  "prevTherapist": { "type": "string" },
                   "massageType": { "type": "string" },
                   "duration": { "type": "number" },
                   "contactNumber": { "type": "string" },
@@ -567,7 +618,13 @@
             "description": "Booking updated successfully"
           },
           "400": {
-            "description": "Validation error, booking not found, or therapist not found"
+            "description": "Validation error or therapist not found"
+          },
+          "403": {
+            "description": "Only the owning customer or an admin may fully edit a booking"
+          },
+          "404": {
+            "description": "Booking not found in the caller's authorized scope"
           }
         }
       }
@@ -575,7 +632,7 @@
     "/api/bookings/delete/{id}": {
       "put": {
         "summary": "Delete or cancel a booking",
-        "description": "Customers may cancel only their own booking at least 24 hours before the appointment. Admins may cancel at any time. Therapists cannot cancel customer appointments. Customer cancellations set status to cancelled; admin cancellations soft-delete the booking with isDeleted = true.",
+        "description": "Customers may cancel only their own booking at least 24 hours before the appointment. Admins may cancel at any time. Therapists cannot cancel customer appointments. A booking outside a customer's scope is returned as not found. Customer cancellations set status to cancelled; admin cancellations soft-delete the booking with isDeleted = true.",
         "tags": ["Bookings"],
         "security": [
           {
@@ -600,10 +657,10 @@
             "description": "Booking is within the customer's 24-hour cancellation window"
           },
           "403": {
-            "description": "Therapists cannot cancel bookings, or the customer does not own the booking"
+            "description": "Therapists cannot cancel bookings, or the authenticated account has no supported role"
           },
           "404": {
-            "description": "Booking not found"
+            "description": "Booking not found in the caller's authorized scope"
           },
           "500": {
             "description": "Unexpected server error"
@@ -614,7 +671,7 @@
     "/api/bookings/update-view/{id}": {
       "get": {
         "summary": "Get a booking for edit view",
-        "description": "Retrieves a booking that is still active and not soft-deleted for an update form.",
+        "description": "Retrieves an active booking for an update form when it belongs to the authenticated customer, is assigned to the authenticated therapist, or the caller is an admin.",
         "tags": ["Bookings"],
         "security": [
           {
@@ -635,8 +692,11 @@
           "200": {
             "description": "Booking retrieved"
           },
-          "400": {
-            "description": "Booking not found"
+          "403": {
+            "description": "The authenticated account has no supported booking role"
+          },
+          "404": {
+            "description": "Booking not found in the caller's authorized scope"
           }
         }
       }
@@ -644,7 +704,7 @@
     "/api/bookings/update-status/{id}": {
       "put": {
         "summary": "Update booking status",
-        "description": "Therapist-only route for moving a booking between status values. Completed bookings also remove the reservation from the therapist profile and commit in a transaction.",
+        "description": "Therapist-only route for moving an assigned booking between status values. A booking assigned to another therapist is returned as not found. Completed bookings also remove the reservation from the therapist profile and commit in a transaction.",
         "tags": ["Bookings"],
         "security": [
           {
@@ -683,7 +743,13 @@
             "description": "Booking status updated"
           },
           "400": {
-            "description": "Validation error or appointment not found"
+            "description": "Validation error"
+          },
+          "403": {
+            "description": "Therapist access required"
+          },
+          "404": {
+            "description": "Booking not found among the therapist's assignments"
           },
           "500": {
             "description": "Unexpected server error"
@@ -752,6 +818,7 @@
     "/api/user-types": {
       "get": {
         "summary": "Get all user types",
+        "description": "Admin-only endpoint that returns available user types.",
         "tags": ["User Types"],
         "security": [
           {
@@ -761,11 +828,15 @@
         "responses": {
           "200": {
             "description": "List of user types"
+          },
+          "403": {
+            "description": "Admin access required"
           }
         }
       },
       "post": {
         "summary": "Create a user type",
+        "description": "Admin-only endpoint that creates a user type.",
         "tags": ["User Types"],
         "security": [
           {
@@ -792,6 +863,9 @@
           },
           "400": {
             "description": "Validation error or duplicate type"
+          },
+          "403": {
+            "description": "Admin access required"
           }
         }
       }

@@ -106,7 +106,6 @@ bookingSchema.methods.createReservation = function (this: BookingDocument) {
 const validateBookings = (bookings: Record<string, any>, user: any) => {
   const schema = Joi.object({
     therapist: (Joi as any).objectId().required(),
-    prevTherapist: (Joi as any).objectId(),
     massageType: Joi.string().required(),
     duration: Joi.number().min(60).max(120).required(),
     contactNumber: Joi.string().min(10).max(20).required(),

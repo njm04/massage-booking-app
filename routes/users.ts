@@ -22,7 +22,7 @@ const registerRateLimiter = createRateLimiter({
   message: "Too many registration attempts. Please try again later.",
 });
 
-router.get("/", auth, getUsers);
+router.get("/", [auth, admin], getUsers);
 router.get("/me", auth, getCurrentUser);
 router.post("/", registerRateLimiter, registerCustomer);
 router.post("/create-user", [auth, admin], createUser);
