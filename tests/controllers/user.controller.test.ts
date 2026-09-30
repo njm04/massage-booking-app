@@ -37,8 +37,8 @@ describe("user controller", () => {
     jest.spyOn(Customer.prototype, "save").mockResolvedValue(undefined as any);
     jest.spyOn(transporter, "sendMail").mockResolvedValue({} as any);
     jest
-      .spyOn(User as any, "findUserByIdAndPopulate")
-      .mockResolvedValue({ _id: "new-user-id" });
+      .spyOn(User, "findUserByIdAndPopulate")
+      .mockResolvedValue({ _id: "new-user-id" } as any);
 
     await registerCustomer(req, res);
 

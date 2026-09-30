@@ -43,7 +43,7 @@
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
+    "@types/express": "^4.17.21",
     "@types/jest": "^29.5.14",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/mongoose": "^5.11.96",
@@ -56,5 +56,9 @@
     "ts-jest": "^29.4.12",
     "tsx": "^4.23.12",
     "typescript": "^5.9.2"
+  },
+  "allowScripts": {
+    "@scarf/scarf@1.4.0": true,
+    "esbuild@0.28.2": true
   }
 }

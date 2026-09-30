@@ -1,0 +1,4 @@
+# Current Codex discovers standalone definitions in .codex/agents/*.toml.
+# No per-role registration or model override is needed.
+[agents]
+enabled = true

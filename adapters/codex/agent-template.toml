@@ -1,0 +1,16 @@
+name = "<agent-name>"
+description = "<short role description>"
+sandbox_mode = "workspace-write"
+
+# Optional: low | medium | high
+# model_reasoning_effort = "medium"
+
+developer_instructions = """
+Read and follow AGENTS.md and any role-specific repository instructions.
+
+Scope:
+- <what this agent should do>
+
+Constraints:
+- <what this agent must not do>
+"""

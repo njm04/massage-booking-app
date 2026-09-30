@@ -1,0 +1,26 @@
+name: example-project
+repository: github.com/example/example-project
+stack:
+  frontend: react
+  backend: node
+  database: postgres
+commands:
+  install: npm install
+  build: npm run build
+  test: npm test
+  lint: npm run lint
+standards:
+  - common
+  - testing
+  - security
+  - git
+  - frontend-react
+  - backend-node
+agents:
+  planner: true
+  implementer: true
+  quick-implementer: true
+  debugger: true
+  reviewer: true
+  documenter: true
+  git-integrator: true

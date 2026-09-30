@@ -152,7 +152,7 @@ export const registerCustomer = async (req: AuthRequest, res: Response) => {
     } catch (emailError) {
       console.warn("Email confirmation skipped", emailError);
     }
-    user = await (User as any).findUserByIdAndPopulate(user._id);
+    user = await User.findUserByIdAndPopulate(user._id);
     res.status(201).send({
       message:
         "Registration successful. Please verify your email before logging in.",
@@ -166,11 +166,12 @@ export const registerCustomer = async (req: AuthRequest, res: Response) => {
 
 export const createUser = async (req: AuthRequest, res: Response) => {
   const { _id: userId } = req.user ?? {};
+  if (!userId) return res.status(401).send("Access denied.");
 
   const { error } = validate(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
-  let userInfo = await (User as any).findUserByIdAndPopulate(userId);
+  let userInfo = await User.findUserByIdAndPopulate(userId);
   if (!userInfo) return res.status(400).send("Invalid user.");
 
   let user = await User.findOne({ email: req.body.email });
@@ -207,7 +208,7 @@ export const createUser = async (req: AuthRequest, res: Response) => {
 
     user.password = await bcrypt.hash(user.password, 10);
     await user.save();
-    user = await (User as any).findUserByIdAndPopulate(user._id);
+    user = await User.findUserByIdAndPopulate(user._id);
     try {
       await emailConfirmation(user);
     } catch (emailError) {
